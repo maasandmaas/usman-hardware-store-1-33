@@ -44,6 +44,7 @@ const salesChartConfig = {
   },
 }
 
+
 const inventoryChartConfig = {
   stock: {
     label: "Current Stock",
