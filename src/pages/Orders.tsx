@@ -682,12 +682,12 @@ const Orders = () => {
   }, []);
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen ">
+    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-[calc(100vh-65px)]">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Orders Management</h1>
+            <h1 className="text-3xl font-bold text-slate-500">Orders Management</h1>
             <p className="text-slate-600">View and manage all customer orders</p>
           </div>
         </div>

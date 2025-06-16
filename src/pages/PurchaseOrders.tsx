@@ -234,12 +234,12 @@ const PurchaseOrders = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6  min-h-screen">
+    <div className="flex-1 p-6 space-y-6 h-[calc(100vh-90px)] ">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold">Purchase Orders</h1>
+            <h1 className="text-3xl font-bold text-gray-500">Purchase Orders</h1>
             <p className="text-gray-400">Manage purchase orders and supplier transactions</p>
           </div>
         </div>
@@ -271,7 +271,7 @@ const PurchaseOrders = () => {
               <FileText className="h-5 w-5 text-gray-700" />
               <div>
                 <p className="text-sm text-gray-500">Total Orders</p>
-                <p className="text-xl font-bold text-gray-900">{statsData.total}</p>
+                <p className="text-xl font-bold text-gray-100">{statsData.total}</p>
               </div>
             </div>
           </CardContent>
@@ -319,7 +319,7 @@ const PurchaseOrders = () => {
               <DollarSign className="h-5 w-5 text-gray-700" />
               <div>
                 <p className="text-sm text-gray-500">Total Value</p>
-                <p className="text-xl font-bold text-gray-900">Rs. {statsData.totalValue.toLocaleString()}</p>
+                <p className="text-xl font-bold text-gray-100">Rs. {statsData.totalValue.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -503,7 +503,7 @@ const PurchaseOrders = () => {
       {filteredOrders.length === 0 && !ordersLoading && (
         <div className="text-center py-12">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No purchase orders found</h3>
+          <h3 className="text-lg font-medium text-gray-100 mb-2">No purchase orders found</h3>
           <p className="text-gray-500">Try adjusting your search criteria or create a new purchase order.</p>
         </div>
       )}
@@ -518,7 +518,7 @@ const PurchaseOrders = () => {
             <div className="space-y-4">
               <div>
                 <Label>Order: {statusUpdateOrder.orderNumber}</Label>
-                <p className="text-sm text-gray-600">Current Status: {statusUpdateOrder.status}</p>
+                <p className="text-sm text-gray-200">Current Status: {statusUpdateOrder.status}</p>
               </div>
               <div>
                 <Label htmlFor="newStatus">New Status</Label>
@@ -651,14 +651,14 @@ const PurchaseOrders = () => {
               {selectedOrder.notes && (
                 <div>
                   <Label>Notes</Label>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedOrder.notes}</p>
+                  <p className="text-sm text-gray-200 whitespace-pre-wrap">{selectedOrder.notes}</p>
                 </div>
               )}
 
               {selectedOrder.createdBy && (
                 <div>
                   <Label>Created By</Label>
-                  <p className="text-sm text-gray-600">{selectedOrder.createdBy}</p>
+                  <p className="text-sm text-gray-200">{selectedOrder.createdBy}</p>
                 </div>
               )}
             </div>

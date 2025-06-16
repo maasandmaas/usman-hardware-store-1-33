@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ShoppingCart, User, X, Plus, Minus, UserPlus, Edit2, CreditCard } from "lucide-react";
+import { ShoppingCart, User, X, Plus, Minus, UserPlus, Edit2, CreditCard, ChevronRight, ChevronLeft } from "lucide-react";
 
 interface CartItem {
   productId: number;
@@ -26,6 +27,7 @@ interface CartSidebarProps {
   paymentMethod: string;
   isCustomerDialogOpen: boolean;
   isQuickCustomerOpen: boolean;
+  isCollapsed?: boolean;
   onSetSelectedCustomer: (customer: any) => void;
   onSetIsCustomerDialogOpen: (open: boolean) => void;
   onSetIsQuickCustomerOpen: (open: boolean) => void;
@@ -35,6 +37,7 @@ interface CartSidebarProps {
   onRemoveFromCart: (productId: number) => void;
   onCheckout: () => void;
   onUpdateItemPrice?: (productId: number, newPrice: number) => void;
+  onToggleCollapse?: () => void;
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -45,6 +48,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   paymentMethod,
   isCustomerDialogOpen,
   isQuickCustomerOpen,
+  isCollapsed = false,
   onSetSelectedCustomer,
   onSetIsCustomerDialogOpen,
   onSetIsQuickCustomerOpen,
@@ -53,7 +57,8 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   onUpdateCartQuantity,
   onRemoveFromCart,
   onCheckout,
-  onUpdateItemPrice
+  onUpdateItemPrice,
+  onToggleCollapse
 }) => {
   const [priceEditingItem, setPriceEditingItem] = useState<number | null>(null);
   const [tempPrice, setTempPrice] = useState<string>("");
@@ -92,19 +97,78 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     customer.email?.toLowerCase().includes(customerSearchTerm.toLowerCase())
   );
 
+  // Collapsed state - show only toggle button and cart count
+  if (isCollapsed) {
+    return (
+      <div className="w-14 bg-card border-l border-border shadow-lg flex flex-col h-screen fixed right-0 top-0 z-40 sm:relative">
+        <div className="p-2 border-b border-border bg-muted/50 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleCollapse}
+            className="w-full h-8 p-0 hover:bg-accent"
+            title="Expand Cart"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <div className="flex-1 flex flex-col items-center justify-center p-2">
+          <div className="relative mb-4">
+            <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+            {cart.length > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-blue-600">
+                {cart.length}
+              </Badge>
+            )}
+          </div>
+          
+          {cart.length > 0 && (
+            <div className="text-center">
+              <div className="text-xs font-medium text-foreground mb-1">
+                PKR {getCartTotal().toLocaleString()}
+              </div>
+              <Button
+                onClick={onCheckout}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs rotate-90 whitespace-nowrap"
+                style={{ writingMode: 'vertical-rl' }}
+              >
+                Pay
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="w-72 bg-card border-l border-border shadow-lg flex flex-col h-screen
+      className="w-64 bg-card border-l border-border shadow-lg flex flex-col h-screen
       fixed right-0 top-0 z-40
       max-w-full
-      sm:relative sm:w-72 sm:max-w-xs
-      "
+      sm:relative sm:w-64 sm:max-w-xs"
       style={{
         width: '100vw',
-        maxWidth: 380,
+        maxWidth: 320,
       }}
     >
       <div className="flex-1 min-h-0 flex flex-col bg-card">
+        {/* Toggle Button */}
+        <div className="p-2 border-b border-border bg-muted/50 flex-shrink-0 flex justify-between items-center">
+          <h3 className="font-medium text-card-foreground text-sm">Cart ({cart.length})</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleCollapse}
+            className="h-6 w-6 p-0 hover:bg-accent"
+            title="Collapse Cart"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+
         {/* Customer, Payment, Order Status */}
         <div className="p-3 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
@@ -191,16 +255,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         </div>
 
         {/* Cart Section - SCROLLABLE AREA */}
-        {/* Add responsive overflow fixing */}
         <div className="flex-1 min-h-0 flex flex-col bg-card custom-scrollbar overflow-y-auto max-h-[44vh] sm:max-h-full">
           <div className="p-3 border-b border-border flex-shrink-0 sticky top-0 z-20 bg-card">
             <h3 className="font-medium text-card-foreground flex items-center gap-2 text-sm">
               <ShoppingCart className="h-4 w-4" />
-              Cart ({cart.length})
+              Items ({cart.length})
             </h3>
           </div>
-          {/* ... keep existing code for empty cart and map section ... */}
-          <div className="space-y-2 pb-4">
+          <div className="space-y-2 pb-4 px-3">
             {cart.length === 0 ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center py-8">
@@ -291,7 +353,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-16 text-center text-xs font-medium text-card-foreground">{item.quantity} {item.unit}</span>
+                      <span className="w-14 text-center text-xs font-medium text-card-foreground">{item.quantity} {item.unit}</span>
                       <Button
                         variant="outline"
                         size="sm"
@@ -313,7 +375,6 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
       </div>
 
       {/* FIXED CHECKOUT SECTION - ALWAYS VISIBLE */}
-      {/* On small screens, always show this at bottom, make background sticky above all other content */}
       {cart.length > 0 && (
         <div className="p-3 border-t border-border bg-card flex-shrink-0 sticky bottom-0 z-50 w-full">
           <div className="space-y-2 mb-3">

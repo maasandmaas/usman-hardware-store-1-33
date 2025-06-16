@@ -333,12 +333,12 @@ export default function Quotations() {
   };
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-100">Quotations</h1>
-          <p className="text-gray-400">Manage customer quotations and price estimates</p>
+          <h1 className="text-3xl font-bold text-gray-500">Quotations</h1>
+          <p className="text-gray-600">Manage customer quotations and price estimates</p>
         </div>
         <Button 
           className="bg-blue-600 hover:bg-blue-700"
@@ -356,7 +356,7 @@ export default function Quotations() {
             <div className="flex items-center">
               <FileText className="h-5 w-5 text-blue-600 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-100">Total</p>
+                <p className="text-sm font-medium text-gray-600">Total</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
@@ -366,9 +366,9 @@ export default function Quotations() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center">
-              <Clock className="h-5 w-5 text-gray-100 mr-3" />
+              <Clock className="h-5 w-5 text-gray-600 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-100">Draft</p>
+                <p className="text-sm font-medium text-gray-600">Draft</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.draft}</p>
               </div>
             </div>
@@ -380,7 +380,7 @@ export default function Quotations() {
             <div className="flex items-center">
               <Send className="h-5 w-5 text-blue-600 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-100">Sent</p>
+                <p className="text-sm font-medium text-gray-600">Sent</p>
                 <p className="text-2xl font-bold text-blue-600">{stats.sent}</p>
               </div>
             </div>
@@ -392,7 +392,7 @@ export default function Quotations() {
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-100">Accepted</p>
+                <p className="text-sm font-medium text-gray-600">Accepted</p>
                 <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
               </div>
             </div>
@@ -404,7 +404,7 @@ export default function Quotations() {
             <div className="flex items-center">
               <XCircle className="h-5 w-5 text-red-600 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-100">Rejected</p>
+                <p className="text-sm font-medium text-gray-600">Rejected</p>
                 <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
               </div>
             </div>
@@ -416,7 +416,7 @@ export default function Quotations() {
             <div className="flex items-center">
               <DollarSign className="h-5 w-5 text-green-600 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-100">Total Value</p>
+                <p className="text-sm font-medium text-gray-600">Total Value</p>
                 <p className="text-2xl font-bold text-green-600">Rs. {stats.totalValue.toLocaleString()}</p>
               </div>
             </div>

@@ -41,17 +41,25 @@ const AccountsReceivable = () => {
       
       if (response.success) {
         setApiConnected(true);
-        // Remove duplicates based on invoice number and customer ID combination
-        const uniqueReceivables = response.data.receivables.filter((item, index, self) => 
-          index === self.findIndex((r) => 
-            r.invoiceNumber === item.invoiceNumber && 
-            r.customerId === item.customerId &&
-            r.balance > 0 // Only include items with outstanding balance
-          )
-        );
+        
+        // Enhanced deduplication: create a unique key and filter by it
+        const uniqueReceivables = response.data.receivables.filter((item, index, self) => {
+          // Create a unique identifier combining multiple fields
+          const uniqueKey = `${item.customerId}-${item.invoiceNumber}-${item.amount}-${item.balance}`;
+          
+          // Find the first occurrence of this unique combination
+          const firstIndex = self.findIndex((r) => {
+            const compareKey = `${r.customerId}-${r.invoiceNumber}-${r.amount}-${r.balance}`;
+            return compareKey === uniqueKey;
+          });
+          
+          // Only include if this is the first occurrence and has outstanding balance
+          return index === firstIndex && item.balance > 0;
+        });
         
         console.log('Original receivables:', response.data.receivables.length);
-        console.log('Unique receivables after deduplication:', uniqueReceivables.length);
+        console.log('Unique receivables after enhanced deduplication:', uniqueReceivables.length);
+        console.log('Filtered receivables:', uniqueReceivables);
         
         setReceivables(uniqueReceivables);
         setSummary(response.data.summary);
@@ -175,13 +183,13 @@ const AccountsReceivable = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen">
+    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-[calc(100vh-65px)]">
       <div className="flex items-center gap-4 mb-8">
         <SidebarTrigger />
         <div>
-          <h1 className="text-3xl font-bold text-slate-100">Accounts Receivable</h1>
+          <h1 className="text-3xl font-bold text-gray-500">Accounts Receivable</h1>
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-slate-600">Track customer payments and outstanding invoices</p>
+            <p className="text-gray-300">Track customer payments and outstanding invoices</p>
             {!apiConnected && (
               <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
                 Demo Data
@@ -200,7 +208,7 @@ const AccountsReceivable = () => {
                 <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-600">Total Overdue</p>
+                <p className="text-sm text-gray-300">Total Overdue</p>
                 <p className="text-2xl font-bold text-red-600">Rs. {summary.overdueAmount.toLocaleString()}</p>
               </div>
             </div>
@@ -214,7 +222,7 @@ const AccountsReceivable = () => {
                 <Calendar className="h-6 w-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-600">Due Today</p>
+                <p className="text-sm text-gray-300">Due Today</p>
                 <p className="text-2xl font-bold text-yellow-600">Rs. {totalDueToday.toLocaleString()}</p>
               </div>
             </div>
@@ -228,7 +236,7 @@ const AccountsReceivable = () => {
                 <DollarSign className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-600">Total Outstanding</p>
+                <p className="text-sm text-gray-300">Total Outstanding</p>
                 <p className="text-2xl font-bold text-blue-600">Rs. {summary.totalReceivables.toLocaleString()}</p>
               </div>
             </div>
@@ -246,7 +254,7 @@ const AccountsReceivable = () => {
             </CardTitle>
             <div className="flex gap-3 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-100 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
                   placeholder="Search customers or invoices..."
                   value={searchTerm}
@@ -269,20 +277,20 @@ const AccountsReceivable = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4 custom-scrollbar max-h-96 overflow-y-auto">
+          <div className="space-y-4 custom-scrollbar max-h-[600px] overflow-y-auto">
             {filteredReceivables.map((item) => (
-              <div key={`${item.customerId}-${item.invoiceNumber}-${item.id}`} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
+              <div key={`${item.customerId}-${item.invoiceNumber}-${item.id}-${item.amount}`} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
                 <div className="flex items-center gap-4">
                   <div>
-                    <h3 className="font-medium text-slate-100">{item.customerName}</h3>
-                    <p className="text-sm text-slate-600">Invoice: {item.invoiceNumber}</p>
+                    <h3 className="font-medium text-gray-300">{item.customerName}</h3>
+                    <p className="text-sm text-gray-300">Invoice: {item.invoiceNumber}</p>
                     <p className="text-xs text-slate-500">Due: {new Date(item.dueDate).toLocaleDateString()}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-lg font-bold text-slate-100">Rs. {item.balance.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-gray-100">Rs. {item.balance.toLocaleString()}</p>
                     <p className="text-xs text-slate-500">Paid: Rs. {item.paidAmount.toLocaleString()}</p>
                     {getStatusBadge(item)}
                   </div>

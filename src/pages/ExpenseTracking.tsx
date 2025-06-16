@@ -280,12 +280,12 @@ export default function ExpenseTracking() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br to-blue-50 min-h-screen">
+    <div className="p-6 space-y-6 min-h-[calc(100vh-65px)]">
       <div className="flex items-center gap-4 mb-8">
         <SidebarTrigger />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-100 to-slate-100 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-500 to-slate-500 bg-clip-text text-transparent">
               Expense Management
             </h1>
             <p className="text-slate-600 mt-1">Track and manage your business expenses</p>
@@ -302,7 +302,7 @@ export default function ExpenseTracking() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-xl">
+        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-2 shadow-xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -316,7 +316,7 @@ export default function ExpenseTracking() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-xl">
+        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-2 shadow-xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -330,7 +330,7 @@ export default function ExpenseTracking() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border-0 shadow-xl">
+        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border-2 shadow-xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -344,7 +344,7 @@ export default function ExpenseTracking() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
+        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-2 shadow-xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -362,11 +362,11 @@ export default function ExpenseTracking() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Category Expense Chart */}
-        <Card className="bg-white shadow-xl border-0">
+        <Card className=" shadow-xl border-2">
           <CardHeader className="pb-4">
-            <CardTitle className="text-slate-800 flex items-center gap-2">
+            <CardTitle className="text-slate-500 flex items-center gap-2">
               <div className="bg-blue-100 p-2 rounded-lg">
-                <TrendingDown className="h-5 w-5 text-blue-600" />
+                <TrendingDown className="h-5 w-5 text-blue-500" />
               </div>
               Expense by Category
             </CardTitle>
@@ -395,9 +395,9 @@ export default function ExpenseTracking() {
         </Card>
 
         {/* Payment Methods Pie Chart */}
-        <Card className="bg-white shadow-xl border-0">
+        <Card className=" shadow-xl border-2">
           <CardHeader className="pb-4">
-            <CardTitle className="text-slate-800 flex items-center gap-2">
+            <CardTitle className="text-slate-500 flex items-center gap-2">
               <div className="bg-green-100 p-2 rounded-lg">
                 <Calendar className="h-5 w-5 text-green-600" />
               </div>
@@ -429,7 +429,7 @@ export default function ExpenseTracking() {
       </div>
 
       {/* Expense Management */}
-      <Card className="bg-white shadow-xl border-0">
+      <Card className=" shadow-xl border-2">
         <CardHeader className="pb-4">
           <CardTitle className="text-slate-800 flex items-center gap-2">
             <div className="bg-indigo-100 p-2 rounded-lg">
@@ -459,19 +459,19 @@ export default function ExpenseTracking() {
             <Table>
               <TableHeader>
                 <TableRow className="border-slate-200">
-                  <TableHead className="text-slate-600 font-semibold">Reference</TableHead>
-                  <TableHead className="text-slate-600 font-semibold">Category</TableHead>
-                  <TableHead className="text-slate-600 font-semibold">Description</TableHead>
-                  <TableHead className="text-slate-600 font-semibold">Amount</TableHead>
-                  <TableHead className="text-slate-600 font-semibold">Date</TableHead>
-                  <TableHead className="text-slate-600 font-semibold">Payment Method</TableHead>
-                  <TableHead className="text-slate-600 font-semibold">Actions</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Reference</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Category</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Description</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Amount</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Date</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Payment Method</TableHead>
+                  <TableHead className="text-slate-500 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.map((expense) => (
                   <TableRow key={expense.id} className="border-slate-100 hover:bg-slate-50">
-                    <TableCell className="font-medium text-slate-900">{expense.reference}</TableCell>
+                    <TableCell className="font-medium text-slate-500">{expense.reference}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-slate-200">
                         {expense.category}

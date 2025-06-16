@@ -658,7 +658,7 @@ Please respond naturally and conversationally. Only include business information
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen bg-background">
+    <div className="flex-1 flex flex-col h-[calc(100vh-65px)] bg-background">
       {/* Header */}
       <div className="border-b bg-card shadow-sm">
         <div className="flex items-center justify-between p-3">

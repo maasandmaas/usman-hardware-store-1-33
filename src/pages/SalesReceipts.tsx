@@ -271,7 +271,7 @@ const SalesReceipts = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-slate-50 min-h-screen">
+    <div className="flex-1 p-6 space-y-6 bg-slate-50 min-h-[calc(100vh-65px)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger />

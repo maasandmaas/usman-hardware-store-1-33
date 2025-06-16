@@ -413,7 +413,7 @@ const Inventory = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
+    <div className="flex-1 p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <div>

@@ -49,6 +49,7 @@ const Sales = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCartCollapsed, setIsCartCollapsed] = useState(false);
 
   // Fullscreen toggle function
   const toggleFullscreen = () => {
@@ -738,7 +739,7 @@ const Sales = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-[calc(100vh-65px)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Main POS Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Header */}
@@ -895,7 +896,7 @@ const Sales = () => {
         </div>
       </div>
 
-      {/* Desktop Cart Sidebar */}
+      {/* Desktop Cart Sidebar - Now Toggleable */}
       <div className={`${isMobile ? 'hidden' : ''} flex-shrink-0`}>
         <CartSidebar
           cart={cart}
@@ -905,6 +906,7 @@ const Sales = () => {
           paymentMethod={paymentMethod}
           isCustomerDialogOpen={isCustomerDialogOpen}
           isQuickCustomerOpen={isQuickCustomerOpen}
+          isCollapsed={isCartCollapsed}
           onSetSelectedCustomer={setSelectedCustomer}
           onSetIsCustomerDialogOpen={setIsCustomerDialogOpen}
           onSetIsQuickCustomerOpen={setIsQuickCustomerOpen}
@@ -914,6 +916,7 @@ const Sales = () => {
           onRemoveFromCart={removeFromCart}
           onCheckout={handleCheckout}
           onUpdateItemPrice={updateItemPrice}
+          onToggleCollapse={() => setIsCartCollapsed(!isCartCollapsed)}
         />
       </div>
 

@@ -506,7 +506,7 @@ const Products = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
+    <div className="flex-1 p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
       {/* HEADER AND BUTTONS: now stacked on small screens */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -715,7 +715,7 @@ const Products = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto">
                 {products.map((product) => (
                   <Card key={product.id} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-4">

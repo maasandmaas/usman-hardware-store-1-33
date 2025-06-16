@@ -160,7 +160,7 @@ const Suppliers = () => {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Supplier Management</h1>
+            <h1 className="text-3xl font-bold text-gray-500">Supplier Management</h1>
             <p className="text-gray-600">Manage your suppliers and vendor relationships</p>
           </div>
         </div>

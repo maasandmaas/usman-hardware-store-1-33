@@ -165,7 +165,7 @@ const Index = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex-1 flex flex-col h-[calc(100vh-65px)] bg-background overflow-hidden">
       {/* Mobile-Optimized Header */}
       <div className="flex-shrink-0 border-b bg-card shadow-sm">
         <div className="p-3 md:p-4">

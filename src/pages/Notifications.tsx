@@ -1,4 +1,3 @@
-
 import { Bell, CheckCircle, AlertTriangle, Info, Clock, Trash2, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,13 +58,13 @@ export default function Notifications() {
   const getBgColor = (type: string, read: boolean) => {
     if (!read) {
       switch (type) {
-        case 'overdue_payment': return 'bg-red-50 border-red-200';
-        case 'low_stock': return 'bg-amber-50 border-amber-200'; 
-        case 'new_order': return 'bg-green-50 border-green-200';
-        default: return 'bg-blue-50 border-blue-200';
+        case 'overdue_payment': return 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800';
+        case 'low_stock': return 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800'; 
+        case 'new_order': return 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800';
+        default: return 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800';
       }
     }
-    return 'bg-white border-gray-200';
+    return 'bg-card border-border';
   };
 
   const formatDate = (dateString: string) => {
@@ -83,12 +82,12 @@ export default function Notifications() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6 min-h-screen">
+      <div className="p-6 space-y-6 bg-background min-h-screen">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-            <p className="text-gray-600">Loading notifications...</p>
+            <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
+            <p className="text-muted-foreground">Loading notifications...</p>
           </div>
         </div>
       </div>
@@ -96,13 +95,13 @@ export default function Notifications() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-background min-h-[calc(100vh-65px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-            <p className="text-gray-600">Stay updated with important business alerts</p>
+            <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
+            <p className="text-muted-foreground">Stay updated with important business alerts</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -122,57 +121,57 @@ export default function Notifications() {
 
       {/* Notification Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
+              <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Urgent</p>
-                <p className="text-2xl font-bold text-gray-900">{urgentNotifications.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Urgent</p>
+                <p className="text-2xl font-bold text-foreground">{urgentNotifications.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
                 <Clock className="h-6 w-6 text-orange-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Action Required</p>
-                <p className="text-2xl font-bold text-gray-900">{actionRequired.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Action Required</p>
+                <p className="text-2xl font-bold text-foreground">{actionRequired.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                 <Bell className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Unread</p>
-                <p className="text-2xl font-bold text-gray-900">{unreadCount}</p>
+                <p className="text-sm font-medium text-muted-foreground">Unread</p>
+                <p className="text-2xl font-bold text-foreground">{unreadCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-foreground">{notifications.length}</p>
               </div>
             </div>
           </CardContent>
@@ -180,7 +179,7 @@ export default function Notifications() {
       </div>
 
       {/* Notifications Tabs */}
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle>Notification Center</CardTitle>
         </CardHeader>
@@ -201,12 +200,12 @@ export default function Notifications() {
                       {getIcon(notification.type)}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">{notification.title}</h4>
+                          <h4 className="font-semibold text-foreground">{notification.title}</h4>
                           {!notification.read && <Badge className="bg-red-500">New</Badge>}
                           {!notification.read && <Badge variant="outline" className="text-orange-600 border-orange-600">Action Required</Badge>}
                         </div>
-                        <p className="text-gray-700 text-sm mb-2">{notification.message}</p>
-                        <p className="text-gray-500 text-xs">{formatDate(notification.createdAt)}</p>
+                        <p className="text-muted-foreground text-sm mb-2">{notification.message}</p>
+                        <p className="text-muted-foreground text-xs">{formatDate(notification.createdAt)}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -240,11 +239,11 @@ export default function Notifications() {
                       {getIcon(notification.type)}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">{notification.title}</h4>
+                          <h4 className="font-semibold text-foreground">{notification.title}</h4>
                           {!notification.read && <Badge className="bg-red-500">New</Badge>}
                         </div>
-                        <p className="text-gray-700 text-sm mb-2">{notification.message}</p>
-                        <p className="text-gray-500 text-xs">{formatDate(notification.createdAt)}</p>
+                        <p className="text-muted-foreground text-sm mb-2">{notification.message}</p>
+                        <p className="text-muted-foreground text-xs">{formatDate(notification.createdAt)}</p>
                       </div>
                     </div>
                   </div>
@@ -260,11 +259,11 @@ export default function Notifications() {
                       {getIcon(notification.type)}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">{notification.title}</h4>
+                          <h4 className="font-semibold text-foreground">{notification.title}</h4>
                           <Badge className="bg-red-500">New</Badge>
                         </div>
-                        <p className="text-gray-700 text-sm mb-2">{notification.message}</p>
-                        <p className="text-gray-500 text-xs">{formatDate(notification.createdAt)}</p>
+                        <p className="text-muted-foreground text-sm mb-2">{notification.message}</p>
+                        <p className="text-muted-foreground text-xs">{formatDate(notification.createdAt)}</p>
                       </div>
                     </div>
                   </div>
@@ -280,11 +279,11 @@ export default function Notifications() {
                       {getIcon(notification.type)}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">{notification.title}</h4>
+                          <h4 className="font-semibold text-foreground">{notification.title}</h4>
                           <Badge variant="outline" className="text-orange-600 border-orange-600">Action Required</Badge>
                         </div>
-                        <p className="text-gray-700 text-sm mb-2">{notification.message}</p>
-                        <p className="text-gray-500 text-xs">{formatDate(notification.createdAt)}</p>
+                        <p className="text-muted-foreground text-sm mb-2">{notification.message}</p>
+                        <p className="text-muted-foreground text-xs">{formatDate(notification.createdAt)}</p>
                       </div>
                     </div>
                   </div>
