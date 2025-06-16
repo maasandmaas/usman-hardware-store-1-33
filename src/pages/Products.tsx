@@ -16,7 +16,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Package, Search, Plus, Edit, Trash2, AlertTriangle, RefreshCw, Download, FileText } from "lucide-react";
+import { Package, Search, Plus, Edit, Trash2, AlertTriangle, RefreshCw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { productsApi, categoriesApi, unitsApi } from "@/services/api";
 import { ProductDetailsModal } from "@/components/sales/ProductDetailsModal";
@@ -32,6 +32,8 @@ const Products = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
+  const [selectedExportCategory, setSelectedExportCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -164,111 +166,22 @@ const Products = () => {
     }
   };
 
-  const handleStockExport = async () => {
+  const handleStockExportPDF = async (categoryToExport = "all") => {
     try {
       setExportLoading(true);
       
       // Fetch all products for export (without pagination)
-      const response = await productsApi.getAll({ 
+      const params: any = { 
         limit: 10000, // Large number to get all products
         status: 'active' 
-      });
+      };
       
-      if (response.success) {
-        const allProducts = response.data.products || response.data || [];
-        const exportData = allProducts.map((product: any) => ({
-          'Product ID': product.id,
-          'Product Name': product.name,
-          'SKU': product.sku,
-          'Category': product.category,
-          'Current Stock': product.stock,
-          'Unit': product.unit,
-          'Price (PKR)': product.price,
-          'Cost Price (PKR)': product.costPrice || 0,
-          'Stock Value (PKR)': (product.stock * (product.costPrice || product.price)),
-          'Min Stock': product.minStock,
-          'Max Stock': product.maxStock || 'N/A',
-          'Description': product.description || 'N/A',
-          'Stock Status': product.stock <= product.minStock ? 'Low Stock' : 'In Stock',
-          'Last Updated': product.updatedAt || 'N/A',
-          'Created Date': product.createdAt || 'N/A'
-        }));
-
-        // Calculate total stock value
-        const totalStockValue = allProducts.reduce((total: number, product: any) => {
-          return total + (product.stock * (product.costPrice || product.price));
-        }, 0);
-
-        // Add summary row
-        exportData.unshift({
-          'Product ID': 'SUMMARY',
-          'Product Name': `Total Products: ${allProducts.length}`,
-          'SKU': `Export Date: ${new Date().toLocaleString()}`,
-          'Category': `Total Stock Value: PKR ${totalStockValue.toLocaleString()}`,
-          'Current Stock': '',
-          'Unit': '',
-          'Price (PKR)': '',
-          'Cost Price (PKR)': '',
-          'Stock Value (PKR)': '',
-          'Min Stock': '',
-          'Max Stock': '',
-          'Description': '',
-          'Stock Status': '',
-          'Last Updated': '',
-          'Created Date': ''
-        });
-
-        // Convert to CSV
-        const headers = Object.keys(exportData[1] || {});
-        const csvContent = [
-          headers.join(','),
-          ...exportData.map(row => 
-            headers.map(header => {
-              const value = row[header as keyof typeof row];
-              return typeof value === 'string' && value.includes(',') 
-                ? `"${value}"` 
-                : value;
-            }).join(',')
-          )
-        ].join('\n');
-
-        // Download CSV
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `stock_export_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        toast({
-          title: "Export Successful",
-          description: `Exported ${allProducts.length} products with complete stock details.`,
-        });
+      // Add category filter if not "all"
+      if (categoryToExport !== "all") {
+        params.category = categoryToExport;
       }
-    } catch (error) {
-      console.error('Failed to export stock:', error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to export stock data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
-  const handleStockExportPDF = async () => {
-    try {
-      setExportLoading(true);
       
-      // Fetch all products for export (without pagination)
-      const response = await productsApi.getAll({ 
-        limit: 10000, // Large number to get all products
-        status: 'active' 
-      });
+      const response = await productsApi.getAll(params);
       
       if (response.success) {
         const allProducts = response.data.products || response.data || [];
@@ -283,7 +196,8 @@ const Products = () => {
         // Title
         pdf.setFontSize(20);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Stock Export Report', pageWidth / 2, yPos, { align: 'center' });
+        const title = categoryToExport === "all" ? 'Complete Stock Export Report' : `Stock Report - ${categoryToExport}`;
+        pdf.text(title, pageWidth / 2, yPos, { align: 'center' });
         yPos += 15;
 
         // Export info
@@ -293,6 +207,10 @@ const Products = () => {
         yPos += 8;
         pdf.text(`Total Products: ${allProducts.length}`, margin, yPos);
         yPos += 8;
+        if (categoryToExport !== "all") {
+          pdf.text(`Category: ${categoryToExport}`, margin, yPos);
+          yPos += 8;
+        }
 
         // Calculate total stock value
         const totalStockValue = allProducts.reduce((total: number, product: any) => {
@@ -351,11 +269,14 @@ const Products = () => {
         pdf.text(`Generated by Inventory Management System`, pageWidth / 2, yPos, { align: 'center' });
 
         // Save PDF
-        pdf.save(`stock_export_${new Date().toISOString().split('T')[0]}.pdf`);
+        const filename = categoryToExport === "all" 
+          ? `stock_export_${new Date().toISOString().split('T')[0]}.pdf`
+          : `stock_export_${categoryToExport}_${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(filename);
 
         toast({
           title: "PDF Export Successful",
-          description: `Exported ${allProducts.length} products to PDF with complete stock details.`,
+          description: `Exported ${allProducts.length} products to PDF${categoryToExport !== "all" ? ` for category: ${categoryToExport}` : ''}.`,
         });
       }
     } catch (error) {
@@ -367,7 +288,16 @@ const Products = () => {
       });
     } finally {
       setExportLoading(false);
+      setIsPdfExportDialogOpen(false);
     }
+  };
+
+  const handlePdfExportClick = () => {
+    setIsPdfExportDialogOpen(true);
+  };
+
+  const handleConfirmPdfExport = () => {
+    handleStockExportPDF(selectedExportCategory);
   };
 
   const handlePageChange = (page: number) => {
@@ -567,7 +497,7 @@ const Products = () => {
 
   if (loading && products.length === 0) {
     return (
-      <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
+      <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-muted-foreground">Loading products...</div>
         </div>
@@ -576,8 +506,9 @@ const Products = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
+      {/* HEADER AND BUTTONS: now stacked on small screens */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
@@ -585,10 +516,11 @@ const Products = () => {
             <p className="text-muted-foreground">Manage your inventory and product catalog</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* The button group now stacks on sm, stays in-header on md+ */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
@@ -617,23 +549,9 @@ const Products = () => {
 
           <Button 
             variant="outline" 
-            onClick={handleStockExport}
+            onClick={handlePdfExportClick}
             disabled={exportLoading}
-            className="bg-green-600 hover:bg-green-700 text-white border-green-600"
-          >
-            {exportLoading ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            {exportLoading ? 'Exporting...' : 'CSV Export'}
-          </Button>
-
-          <Button 
-            variant="outline" 
-            onClick={handleStockExportPDF}
-            disabled={exportLoading}
-            className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+            className="bg-red-600 hover:bg-red-700 text-white border-red-600 w-full sm:w-auto"
           >
             {exportLoading ? (
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -645,7 +563,7 @@ const Products = () => {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
@@ -659,6 +577,43 @@ const Products = () => {
           </Dialog>
         </div>
       </div>
+
+      {/* PDF Export Category Selection Dialog */}
+      <Dialog open={isPdfExportDialogOpen} onOpenChange={setIsPdfExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Export Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="exportCategory">Choose which products to export:</Label>
+              <Select value={selectedExportCategory} onValueChange={setSelectedExportCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleConfirmPdfExport} className="flex-1" disabled={exportLoading}>
+                {exportLoading ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                {exportLoading ? 'Exporting...' : 'Export PDF'}
+              </Button>
+              <Button variant="outline" onClick={() => setIsPdfExportDialogOpen(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('all', 'All Products')}>

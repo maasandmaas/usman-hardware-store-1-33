@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from "recharts"
-import { DollarSign, TrendingUp, Package, Users, AlertTriangle, CheckCircle, ShoppingCart, Target, ArrowUpDown, Download, FileText, Calendar } from "lucide-react"
+import { DollarSign, TrendingUp, Package, Users, AlertTriangle, CheckCircle, ShoppingCart, Target, ArrowUpDown, Download, FileText, Calendar, CreditCard, Package2, Activity, Banknote } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { dashboardApi } from "@/services/api"
 import { reportsApi } from "@/services/reportsApi"
@@ -43,7 +43,6 @@ const salesChartConfig = {
     color: "#f59e0b",
   },
 }
-
 
 const inventoryChartConfig = {
   stock: {
@@ -140,6 +139,14 @@ export default function Dashboard() {
     }
   ]
 
+  // Create payment method data for pie chart
+  const paymentMethodData = stats?.sales?.paymentMethods?.map((method, index) => ({
+    name: method.method.charAt(0).toUpperCase() + method.method.slice(1),
+    value: method.amount,
+    count: method.count,
+    color: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'][index % 4]
+  })) || []
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-6">
       <Tabs defaultValue="overview" className="space-y-4">
@@ -151,75 +158,186 @@ export default function Dashboard() {
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
-          {/* Overview Cards with proper dark mode support */}
+          {/* Enhanced Overview Cards with gradient backgrounds */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <Card className="border-l-4 border-l-blue-500 bg-card dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Today's Revenue</CardTitle>
-                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent className="pt-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-b-lg">
-                <div className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  Rs. {stats?.financial?.todayRevenue?.toLocaleString() || '0'}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Today's Revenue</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        Rs. {stats?.financial?.todayRevenue?.toLocaleString() || '0'}
+                      </p>
+                      <p className="text-xs text-white/80">
+                        {stats?.financial?.revenueGrowth > 0 ? '+' : ''}
+                        {stats?.financial?.revenueGrowth?.toFixed(1) || '0'}% from yesterday
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <DollarSign className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-green-600 dark:text-green-400">
-                  {stats?.financial?.revenueGrowth > 0 ? '+' : ''}
-                  {stats?.financial?.revenueGrowth?.toFixed(1) || '0'}% from yesterday
-                </p>
               </CardContent>
             </Card>
             
-            <Card className="border-l-4 border-l-green-500 bg-card dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Today's Orders</CardTitle>
-                <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-              </CardHeader>
-              <CardContent className="pt-0 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-b-lg">
-                <div className="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                  {stats?.sales?.todaySales?.toLocaleString() || '0'}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-green-500 to-green-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Today's Orders</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        {stats?.sales?.todaySales?.toLocaleString() || '0'}
+                      </p>
+                      <p className="text-xs text-white/80">
+                        Avg: Rs. {stats?.sales?.avgOrderValue?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <ShoppingCart className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Avg: Rs. {stats?.sales?.avgOrderValue?.toLocaleString() || '0'}
-                </p>
               </CardContent>
             </Card>
             
-            <Card className="border-l-4 border-l-red-500 bg-card dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Low Stock Items</CardTitle>
-                <Package className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
-              </CardHeader>
-              <CardContent className="pt-0 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 rounded-b-lg">
-                <div className="text-lg sm:text-2xl font-bold text-red-600 dark:text-red-400">
-                  {stats?.inventory?.lowStockItems || '0'}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-red-500 to-red-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Low Stock Items</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        {stats?.inventory?.lowStockItems || '0'}
+                      </p>
+                      <p className="text-xs text-white/80">
+                        Value: Rs. {(stats?.inventory?.totalInventoryValue / 1000)?.toFixed(0) || '0'}k
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <Package className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Value: Rs. {(stats?.inventory?.totalInventoryValue / 1000)?.toFixed(0) || '0'}k
-                </p>
               </CardContent>
             </Card>
             
-            <Card className="border-l-4 border-l-purple-500 bg-card dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Total Customers</CardTitle>
-                <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent className="pt-0 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 rounded-b-lg">
-                <div className="text-lg sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {stats?.customers?.totalCustomers?.toLocaleString() || '0'}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Total Customers</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        {stats?.customers?.totalCustomers?.toLocaleString() || '0'}
+                      </p>
+                      <p className="text-xs text-white/80">
+                        Avg: Rs. {stats?.customers?.avgCustomerValue?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Avg: Rs. {stats?.customers?.avgCustomerValue?.toLocaleString() || '0'}
-                </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Four Main Charts in a 2x2 Grid with Fixed Height */}
+          {/* Additional Financial Metrics Row */}
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Month Revenue</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        Rs. {(stats?.financial?.monthRevenue / 1000)?.toFixed(0) || '0'}k
+                      </p>
+                      <p className="text-xs text-white/80">
+                        {stats?.financial?.monthlyGrowth?.toFixed(1) || '0'}% growth
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <TrendingUp className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Profit Margin</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        {stats?.financial?.profitMargin?.toFixed(1) || '0'}%
+                      </p>
+                      <p className="text-xs text-white/80">
+                        Rs. {(stats?.financial?.netProfit / 1000)?.toFixed(0) || '0'}k profit
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <Target className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Inventory Value</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        Rs. {(stats?.inventory?.totalInventoryValue / 1000000)?.toFixed(1) || '0'}M
+                      </p>
+                      <p className="text-xs text-white/80">
+                        Turnover: {stats?.inventory?.inventoryTurnover?.toFixed(2) || '0'}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <Package2 className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-white/90 mb-1">Receivables</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white mb-1">
+                        Rs. {stats?.customers?.totalReceivables?.toLocaleString() || '0'}
+                      </p>
+                      <p className="text-xs text-white/80">
+                        Outstanding payments
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <CreditCard className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Enhanced Charts Section */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 mb-8">
             {/* Cash Flow Chart */}
-            <Card className="col-span-1">
-              <CardHeader className="pb-3">
+            <Card className="col-span-1 shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <ArrowUpDown className="h-5 w-5 text-blue-600" />
                   Cash Flow Analysis
@@ -259,9 +377,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Sales by Category Chart with Multiple Colors */}
-            <Card className="col-span-1">
-              <CardHeader className="pb-3">
+            {/* Sales by Category Chart */}
+            <Card className="col-span-1 shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Package className="h-5 w-5 text-green-600" />
                   Sales by Category
@@ -298,9 +416,48 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
+            {/* Payment Methods Distribution */}
+            <Card className="col-span-1 shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <CreditCard className="h-5 w-5 text-purple-600" />
+                  Payment Methods
+                </CardTitle>
+                <CardDescription className="text-sm">Distribution by payment method</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                <ChartContainer config={categoryChartConfig} className="h-[300px] w-full">
+                  <PieChart>
+                    <Pie
+                      data={paymentMethodData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      innerRadius={40}
+                      dataKey="value"
+                      label={({ name, count }) => `${name}: ${count} orders`}
+                      labelLine={false}
+                    >
+                      {paymentMethodData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip 
+                      content={<ChartTooltipContent 
+                        formatter={(value, name, props) => [
+                          `Rs. ${props.payload.value.toLocaleString()}`,
+                          `${props.payload.name} (${props.payload.count} orders)`
+                        ]}
+                      />} 
+                    />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
             {/* Sales vs Target */}
-            <Card className="col-span-1">
-              <CardHeader className="pb-3">
+            <Card className="col-span-1 shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Target className="h-5 w-5 text-orange-600" />
                   Sales vs Target
@@ -337,66 +494,72 @@ export default function Dashboard() {
                 </ChartContainer>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Inventory Status */}
-            <Card className="col-span-1">
-              <CardHeader className="pb-3">
+          {/* New Analytics Section - Weekly Performance Trend */}
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+            <Card className="shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-950/20 dark:to-indigo-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <Package className="h-5 w-5 text-purple-600" />
-                  Inventory Status
+                  <Activity className="h-5 w-5 text-indigo-600" />
+                  Weekly Performance Trend
                 </CardTitle>
-                <CardDescription className="text-sm">Current stock levels by category</CardDescription>
+                <CardDescription className="text-sm">Revenue and orders over time</CardDescription>
               </CardHeader>
               <CardContent className="p-4">
-                <ChartContainer config={inventoryChartConfig} className="h-[300px] w-full">
-                  <BarChart 
-                    data={inventoryData} 
-                    layout="vertical" 
-                    margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
-                  >
+                <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
+                  <LineChart data={stats?.performance?.weeklyTrend || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
-                    <XAxis 
-                      type="number" 
-                      tick={{ fontSize: 12, fill: 'currentColor' }} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tickFormatter={(value) => `${value} units`}
-                    />
-                    <YAxis 
-                      dataKey="category" 
-                      type="category" 
-                      tick={{ fontSize: 12, fill: 'currentColor' }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={80}
-                    />
-                    <ChartTooltip 
-                      content={<ChartTooltipContent 
-                        formatter={(value, name) => [
-                          `${value} units`,
-                          name === 'stock' ? 'Current Stock' : 
-                          name === 'sold' ? 'Units Sold' : 'Reorder Level'
-                        ]}
-                      />} 
-                    />
-                    <Bar dataKey="stock" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Current Stock" />
-                  </BarChart>
+                    <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
+                    <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`} />
+                    <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [`Rs. ${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Orders']} />} />
+                    <Line dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} />
+                    <Line dataKey="orders" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }} />
+                  </LineChart>
                 </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Fast Moving Products */}
+            <Card className="shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <Package2 className="h-5 w-5 text-emerald-600" />
+                  Fast Moving Products
+                </CardTitle>
+                <CardDescription className="text-sm">Top selling products this period</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  {stats?.inventory?.fastMovingProducts?.slice(0, 5).map((product, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{product.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Sold: {product.sold} | Remaining: {product.remaining}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300">
+                        #{index + 1}
+                      </Badge>
+                    </div>
+                  )) || <p className="text-center text-gray-500 py-8">No product data available</p>}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Detailed Information Sections with dark mode support */}
+          {/* Enhanced Information Sections */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 mt-8">
             {/* Recent High-Value Sales */}
-            <Card className="bg-card dark:bg-card">
-              <CardHeader className="pb-3">
+            <Card className="bg-card dark:bg-card shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20">
                 <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   Recent High-Value Sales
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 p-4">
                 {stats?.sales?.highValueSales?.slice(0, 3).map((sale, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                     <div>
@@ -414,15 +577,40 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
+            {/* Recent Payments */}
+            <Card className="bg-card dark:bg-card shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20">
+                <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
+                  <Banknote className="h-5 w-5 text-blue-500" />
+                  Recent Payments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                {stats?.cashFlow?.recentPayments?.slice(0, 3).map((payment, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">{payment.customer}</p>
+                      <p className="text-xs text-muted-foreground">{payment.date}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Rs. {payment.amount.toLocaleString()}</p>
+                    </div>
+                  </div>
+                )) || (
+                  <p className="text-sm text-muted-foreground">No recent payments</p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* System Alerts */}
-            <Card className="bg-card dark:bg-card">
-              <CardHeader className="pb-3">
+            <Card className="bg-card dark:bg-card shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20">
                 <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
                   <AlertTriangle className="h-5 w-5 text-yellow-500" />
                   System Alerts
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 p-4">
                 {stats?.inventory?.lowStockItems > 0 && (
                   <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                     <AlertTriangle className="h-4 w-4 text-yellow-500" />
@@ -454,43 +642,13 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Quick Stats */}
-            <Card className="bg-card dark:bg-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
-                  <TrendingUp className="h-5 w-5 text-blue-500" />
-                  Quick Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <span className="text-sm font-medium text-card-foreground">Profit Margin</span>
-                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                    {stats?.financial?.profitMargin?.toFixed(1) || '0'}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <span className="text-sm font-medium text-card-foreground">Receivables</span>
-                  <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
-                    Rs. {(stats?.customers?.totalReceivables / 1000)?.toFixed(0) || '0'}k
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <span className="text-sm font-medium text-card-foreground">Daily Avg Revenue</span>
-                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                    Rs. {(stats?.performance?.dailyAvgRevenue / 1000)?.toFixed(0) || '0'}k
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-6">
           {/* Enhanced Analytics Section */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20">
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
                 <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -510,7 +668,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20">
+            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Inventory Turnover</CardTitle>
                 <Package className="h-4 w-4 text-green-500" />
@@ -530,7 +688,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20">
+            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Receivables</CardTitle>
                 <DollarSign className="h-4 w-4 text-orange-500" />
@@ -550,7 +708,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20">
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Daily Avg Revenue</CardTitle>
                 <TrendingUp className="h-4 w-4 text-purple-500" />

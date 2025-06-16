@@ -1,5 +1,4 @@
-
-const BASE_URL = 'https://zaidawn.site/wp-json/ims/v1';
+const BASE_URL = 'https://aliishaq.site/wp-json/ims/v1';
 
 export interface BackupStatus {
   lastBackup: string;

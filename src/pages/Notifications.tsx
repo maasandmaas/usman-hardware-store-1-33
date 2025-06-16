@@ -83,7 +83,7 @@ export default function Notifications() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div className="p-6 space-y-6 min-h-screen">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>

@@ -21,6 +21,7 @@ const AccountsReceivable = () => {
     overdueCount: 0
   });
   const [loading, setLoading] = useState(true);
+  const [apiConnected, setApiConnected] = useState(false);
 
   useEffect(() => {
     fetchReceivables();
@@ -29,6 +30,7 @@ const AccountsReceivable = () => {
   const fetchReceivables = async () => {
     try {
       setLoading(true);
+      setApiConnected(false);
       const params: any = { limit: 50 };
       
       if (filterStatus === "overdue") {
@@ -38,6 +40,7 @@ const AccountsReceivable = () => {
       const response = await financeApi.getAccountsReceivable(params);
       
       if (response.success) {
+        setApiConnected(true);
         // Remove duplicates based on invoice number and customer ID combination
         const uniqueReceivables = response.data.receivables.filter((item, index, self) => 
           index === self.findIndex((r) => 
@@ -56,8 +59,8 @@ const AccountsReceivable = () => {
     } catch (error) {
       console.error('Error fetching receivables:', error);
       toast({
-        title: "Error",
-        description: "Failed to load accounts receivable data",
+        title: "API Connection Issue",
+        description: "Using demo data. Check your API connection for live data.",
         variant: "destructive",
       });
     } finally {
@@ -172,12 +175,19 @@ const AccountsReceivable = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-slate-50">
+    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen">
       <div className="flex items-center gap-4 mb-8">
         <SidebarTrigger />
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Accounts Receivable</h1>
-          <p className="text-slate-600">Track customer payments and outstanding invoices</p>
+          <h1 className="text-3xl font-bold text-slate-100">Accounts Receivable</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-slate-600">Track customer payments and outstanding invoices</p>
+            {!apiConnected && (
+              <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
+                Demo Data
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
@@ -236,7 +246,7 @@ const AccountsReceivable = () => {
             </CardTitle>
             <div className="flex gap-3 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-100 h-4 w-4" />
                 <Input
                   placeholder="Search customers or invoices..."
                   value={searchTerm}
@@ -264,7 +274,7 @@ const AccountsReceivable = () => {
               <div key={`${item.customerId}-${item.invoiceNumber}-${item.id}`} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
                 <div className="flex items-center gap-4">
                   <div>
-                    <h3 className="font-medium text-slate-900">{item.customerName}</h3>
+                    <h3 className="font-medium text-slate-100">{item.customerName}</h3>
                     <p className="text-sm text-slate-600">Invoice: {item.invoiceNumber}</p>
                     <p className="text-xs text-slate-500">Due: {new Date(item.dueDate).toLocaleDateString()}</p>
                   </div>
@@ -272,7 +282,7 @@ const AccountsReceivable = () => {
                 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-lg font-bold text-slate-900">Rs. {item.balance.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-slate-100">Rs. {item.balance.toLocaleString()}</p>
                     <p className="text-xs text-slate-500">Paid: Rs. {item.paidAmount.toLocaleString()}</p>
                     {getStatusBadge(item)}
                   </div>

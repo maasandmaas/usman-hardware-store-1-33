@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,17 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
-import { customersApi, productsApi } from "@/services/api";
-import { useToast } from "@/components/ui/use-toast";
+import { Plus, Trash2, Calculator } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import CustomerPicker from "./CustomerPicker";
+import ProductPicker from "./ProductPicker";
 
 const quotationSchema = z.object({
-  customerId: z.string().min(1, "Customer is required"),
+  customerId: z.number().min(1, "Customer is required"),
   validUntil: z.string().min(1, "Valid until date is required"),
   items: z.array(z.object({
-    productId: z.string().min(1, "Product is required"),
+    productId: z.number().min(1, "Product is required"),
     quantity: z.number().min(1, "Quantity must be at least 1"),
     unitPrice: z.number().min(0, "Unit price must be positive"),
   })).min(1, "At least one item is required"),
@@ -28,24 +27,36 @@ const quotationSchema = z.object({
 type QuotationFormData = z.infer<typeof quotationSchema>;
 
 interface QuotationFormProps {
+  quotation?: any;
   onSubmit: (data: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-export default function QuotationForm({ onSubmit, onCancel, isLoading }: QuotationFormProps) {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+export default function QuotationForm({ quotation, onSubmit, onCancel, isLoading }: QuotationFormProps) {
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedProducts, setSelectedProducts] = useState<{ [key: number]: any }>({});
   const { toast } = useToast();
+
+  // Set default valid until date (30 days from now)
+  const getDefaultValidUntil = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().split('T')[0];
+  };
 
   const form = useForm<QuotationFormData>({
     resolver: zodResolver(quotationSchema),
     defaultValues: {
-      customerId: "",
-      validUntil: "",
-      items: [{ productId: "", quantity: 1, unitPrice: 0 }],
-      discount: 0,
-      notes: "",
+      customerId: quotation?.customerId || 0,
+      validUntil: quotation?.validUntil || getDefaultValidUntil(),
+      items: quotation?.items?.map((item: any) => ({
+        productId: item.productId || 0,
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+      })) || [{ productId: 0, quantity: 1, unitPrice: 0 }],
+      discount: quotation?.discount || 0,
+      notes: quotation?.notes || "",
     },
   });
 
@@ -54,232 +65,259 @@ export default function QuotationForm({ onSubmit, onCancel, isLoading }: Quotati
     name: "items",
   });
 
+  // Set initial customer and products if editing
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [customersResponse, productsResponse] = await Promise.all([
-          customersApi.getAll({ limit: 100 }),
-          productsApi.getAll({ limit: 100 }),
-        ]);
-
-        if (customersResponse.success) {
-          setCustomers(customersResponse.data.customers || []);
-        }
-        if (productsResponse.success) {
-          setProducts(productsResponse.data.products || []);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load customers and products",
-          variant: "destructive",
+    if (quotation) {
+      if (quotation.customerId && quotation.customerName) {
+        setSelectedCustomer({
+          id: quotation.customerId,
+          name: quotation.customerName,
         });
       }
-    };
-
-    fetchData();
-  }, [toast]);
-
-  const handleProductChange = (index: number, productId: string) => {
-    const product = products.find(p => p.id.toString() === productId);
-    if (product) {
-      form.setValue(`items.${index}.unitPrice`, product.salePrice || 0);
+      
+      // Set initial products for editing
+      if (quotation.items) {
+        const productMap: { [key: number]: any } = {};
+        quotation.items.forEach((item: any, index: number) => {
+          if (item.productId && item.productName) {
+            productMap[index] = {
+              id: item.productId,
+              name: item.productName,
+              salePrice: item.unitPrice,
+            };
+          }
+        });
+        setSelectedProducts(productMap);
+      }
     }
+  }, [quotation]);
+
+  const handleCustomerSelect = (customer: any) => {
+    setSelectedCustomer(customer);
+    form.setValue("customerId", Number(customer.id)); // Ensure it's a number!
+  };
+
+  const handleProductSelect = (index: number, product: any) => {
+    setSelectedProducts(prev => ({ ...prev, [index]: product }));
+    form.setValue(`items.${index}.productId`, product.id);
+    form.setValue(`items.${index}.unitPrice`, product.salePrice || product.price || 0);
+  };
+
+  const calculateSubtotal = () => {
+    const items = form.watch("items");
+    return items.reduce((sum, item) => {
+      return sum + (item.quantity * item.unitPrice);
+    }, 0);
   };
 
   const calculateTotal = () => {
-    const items = form.watch("items");
+    const subtotal = calculateSubtotal();
     const discount = form.watch("discount") || 0;
-    
-    const subtotal = items.reduce((sum, item) => {
-      return sum + (item.quantity * item.unitPrice);
-    }, 0);
-    
     return subtotal - discount;
   };
 
   const handleSubmit = (data: QuotationFormData) => {
+    // Ensure customerId is always a number (extra safety, in case)
     const formattedData = {
-      customerId: parseInt(data.customerId),
-      validUntil: data.validUntil,
+      ...data,
+      customerId: Number(data.customerId),
       items: data.items.map(item => ({
-        productId: parseInt(item.productId),
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        ...item,
+        productId: Number(item.productId), // force numeric productId (for API + schema)
+        unitPrice: Number(item.unitPrice),
+        quantity: Number(item.quantity),
       })),
-      discount: data.discount || 0,
+      discount: Number(data.discount) || 0,
       notes: data.notes || "",
     };
 
     onSubmit(formattedData);
   };
 
+  const addNewItem = () => {
+    append({ productId: 0, quantity: 1, unitPrice: 0 });
+  };
+
+  const removeItem = (index: number) => {
+    remove(index);
+    setSelectedProducts(prev => {
+      const newProducts = { ...prev };
+      delete newProducts[index];
+      return newProducts;
+    });
+  };
+
   return (
-    <Card className="w-full max-w-4xl">
-      <CardHeader>
-        <CardTitle>Create New Quotation</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="customerId">Customer</Label>
-              <Select onValueChange={(value) => form.setValue("customerId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id.toString()}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.customerId && (
-                <p className="text-sm text-red-600">{form.formState.errors.customerId.message}</p>
-              )}
-            </div>
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      {/* Customer and Date Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CustomerPicker
+          selectedCustomer={selectedCustomer}
+          onCustomerSelect={handleCustomerSelect}
+        />
 
-            <div className="space-y-2">
-              <Label htmlFor="validUntil">Valid Until</Label>
-              <Input
-                id="validUntil"
-                type="date"
-                {...form.register("validUntil")}
-              />
-              {form.formState.errors.validUntil && (
-                <p className="text-sm text-red-600">{form.formState.errors.validUntil.message}</p>
-              )}
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="validUntil">Valid Until *</Label>
+          <Input
+            id="validUntil"
+            type="date"
+            {...form.register("validUntil")}
+            className="h-[50px]"
+          />
+          {form.formState.errors.validUntil && (
+            <p className="text-sm text-red-600">{form.formState.errors.validUntil.message}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Customer Error */}
+      {form.formState.errors.customerId && (
+        <p className="text-sm text-red-600">{form.formState.errors.customerId.message}</p>
+      )}
+
+      {/* Items Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Quotation Items</CardTitle>
+            <Button
+              type="button"
+              onClick={addNewItem}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item
+            </Button>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {fields.map((field, index) => (
+            <div key={field.id} className="p-4 border rounded-lg space-y-4 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-lg">Item {index + 1}</span>
+                {fields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeItem(index)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Label className="text-lg font-medium">Items</Label>
-              <Button
-                type="button"
-                onClick={() => append({ productId: "", quantity: 1, unitPrice: 0 })}
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-
-            {fields.map((field, index) => (
-              <div key={field.id} className="p-4 border rounded-lg space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Item {index + 1}</span>
-                  {fields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => remove(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <ProductPicker
+                    selectedProduct={selectedProducts[index] || null}
+                    onProductSelect={(product) => handleProductSelect(index, product)}
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label>Product</Label>
-                    <Select
-                      onValueChange={(value) => {
-                        form.setValue(`items.${index}.productId`, value);
-                        handleProductChange(index, value);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label>Quantity *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    className="h-[50px]"
+                    {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label>Quantity</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label>Unit Price *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="h-[50px]"
+                    {...form.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label>Unit Price</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...form.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Total</Label>
-                    <Input
-                      type="number"
-                      value={(form.watch(`items.${index}.quantity`) * form.watch(`items.${index}.unitPrice`)).toFixed(2)}
-                      readOnly
-                    />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-3"></div>
+                <div className="space-y-2">
+                  <Label>Item Total</Label>
+                  <div className="h-[50px] px-3 py-2 bg-gray-100 border rounded-md flex items-center font-medium">
+                    Rs. {(form.watch(`items.${index}.quantity`) * form.watch(`items.${index}.unitPrice`)).toFixed(2)}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {form.formState.errors.items && (
+            <p className="text-sm text-red-600">{form.formState.errors.items.message}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="discount">Discount</Label>
+              <Label htmlFor="discount">Discount Amount</Label>
               <Input
                 id="discount"
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="0.00"
+                className="h-[50px]"
                 {...form.register("discount", { valueAsNumber: true })}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Total Amount</Label>
-              <Input
-                type="number"
-                value={calculateTotal().toFixed(2)}
-                readOnly
-                className="font-bold"
-              />
+            <div className="space-y-4">
+              <div className="flex justify-between text-lg">
+                <span>Subtotal:</span>
+                <span className="font-medium">Rs. {calculateSubtotal().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg">
+                <span>Discount:</span>
+                <span className="font-medium">Rs. {(form.watch("discount") || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-xl font-bold border-t pt-4">
+                <span>Total:</span>
+                <span className="text-green-600">Rs. {calculateTotal().toFixed(2)}</span>
+              </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Additional notes or comments"
-              {...form.register("notes")}
-            />
-          </div>
+      {/* Notes */}
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          placeholder="Additional notes or comments..."
+          rows={4}
+          {...form.register("notes")}
+        />
+      </div>
 
-          <div className="flex gap-4 justify-end">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Quotation"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      {/* Form Actions */}
+      <div className="flex gap-4 justify-end">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+          {isLoading ? "Processing..." : (quotation ? "Update Quotation" : "Create Quotation")}
+        </Button>
+      </div>
+    </form>
   );
 }

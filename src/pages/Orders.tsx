@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Search, ShoppingCart, Eye, Calendar, DollarSign, User, Package, Download, FileText, RefreshCw } from "lucide-react";
+import { Search, ShoppingCart, Eye, Calendar, DollarSign, User, Package, FileText, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { salesApi } from "@/services/api";
 import { OrderDetailsModal } from "@/components/orders/OrderDetailsModal";
+import { PDFExportModal, ExportOptions } from "@/components/orders/PDFExportModal";
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
@@ -57,9 +58,9 @@ const Orders = () => {
     avgOrderValue: 0
   });
   
-  // NEW: State for order details modal
   const [selectedOrder, setSelectedOrder] = useState<Sale | null>(null);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+  const [isPDFExportModalOpen, setIsPDFExportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -70,7 +71,7 @@ const Orders = () => {
       setLoading(true);
       const params: any = {
         page: currentPage,
-        limit: 20,
+        limit: 20
       };
 
       if (filterStatus !== "all") {
@@ -108,17 +109,19 @@ const Orders = () => {
     }
   };
 
-  // NEW: Handle view order details
   const handleViewOrder = (order: Sale) => {
     setSelectedOrder(order);
     setIsOrderDetailsOpen(true);
   };
 
-  // ENHANCED 80MM THERMAL RECEIPT - Fixed Character Issues & Perfect Alignment
+  // ENHANCED 80MM THERMAL RECEIPT
   const handleOrderPDF = async (order: Sale) => {
     try {
+      // Calculate final total without tax (subtotal - discount)
+      const finalTotal = order.subtotal - order.discount;
+      
       // Generate QR code with proper encoding
-      const qrData = `USMAN-HARDWARE-${order.orderNumber}-${order.total}-VERIFIED`;
+      const qrData = `USMAN-HARDWARE-${order.orderNumber}-${finalTotal}-VERIFIED`;
       const qrCodeDataURL = await QRCode.toDataURL(qrData, {
         width: 60,
         margin: 1,
@@ -310,16 +313,18 @@ const Orders = () => {
       pdf.line(8, yPos, pageWidth - 8, yPos);
       yPos += 6;
 
-      // TOTALS SECTION - LEFT ALIGNED
-      const totalsStartX = 8; // Changed from right-aligned to left-aligned
+      // TOTALS SECTION - LEFT ALIGNED (NO TAX)
+      const totalsStartX = 8;
       
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
       
+      // Show subtotal first
       pdf.text('Subtotal:', totalsStartX, yPos);
       pdf.text(`PKR ${order.subtotal.toFixed(0)}`, totalsStartX + 35, yPos);
       yPos += 4;
       
+      // Show discount if any
       if (order.discount > 0) {
         pdf.setTextColor(220, 38, 127);
         pdf.text('Discount:', totalsStartX, yPos);
@@ -328,13 +333,7 @@ const Orders = () => {
         yPos += 4;
       }
       
-      if (order.tax > 0) {
-        pdf.text('Tax:', totalsStartX, yPos);
-        pdf.text(`PKR ${order.tax.toFixed(0)}`, totalsStartX + 35, yPos);
-        yPos += 4;
-      }
-      
-      // Grand Total with emphasis - LEFT ALIGNED
+      // Grand Total with emphasis - LEFT ALIGNED (subtotal minus discount, NO TAX)
       pdf.setFillColor(26, 54, 93);
       pdf.roundedRect(totalsStartX, yPos, 45, 6, 1, 1, 'F');
       
@@ -342,7 +341,7 @@ const Orders = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
       pdf.text('TOTAL:', totalsStartX + 3, yPos + 4);
-      pdf.text(`PKR ${order.total.toFixed(0)}`, totalsStartX + 25, yPos + 4);
+      pdf.text(`PKR ${finalTotal.toFixed(0)}`, totalsStartX + 25, yPos + 4);
       
       yPos += 12;
 
@@ -432,11 +431,11 @@ const Orders = () => {
       pdf.save(`UH_Receipt_${order.orderNumber}_80mm.pdf`);
       
       toast({
-        title: "Perfect 80mm Receipt Generated!",
-        description: `Clean thermal receipt for order ${order.orderNumber} with complete product names and proper alignment`,
+        title: "Receipt Generated!",
+        description: `Thermal receipt for order ${order.orderNumber}`,
       });
     } catch (error) {
-      console.error('Failed to generate 80mm receipt:', error);
+      console.error('Failed to generate receipt:', error);
       toast({
         title: "Receipt Generation Failed",
         description: "Failed to generate thermal receipt. Please try again.",
@@ -450,113 +449,53 @@ const Orders = () => {
     fetchOrders();
   };
 
-  const handleOrdersExportCSV = async () => {
+  const handleAdvancedPDFExport = async (options: ExportOptions) => {
     try {
       setExportLoading(true);
+      setIsPDFExportModalOpen(false);
       
-      // Fetch all orders for export (without pagination)
-      const response = await salesApi.getAll({ 
-        limit: 10000, // Large number to get all orders
+      // Build query parameters based on options
+      const params: any = { 
+        limit: 10000,
         page: 1
-      });
-      
-      if (response.success) {
-        const allOrders = response.data.sales || response.data || [];
-        const exportData = allOrders.map((order: Sale) => ({
-          'Order Number': order.orderNumber,
-          'Customer Name': order.customerName || 'Walk-in',
-          'Customer ID': order.customerId || 'N/A',
-          'Date': new Date(order.date).toLocaleDateString(),
-          'Time': order.time,
-          'Items Count': order.items.length,
-          'Items': order.items.map(item => `${item.productName} (${item.quantity}x)`).join('; '),
-          'Subtotal (PKR)': order.subtotal,
-          'Discount (PKR)': order.discount,
-          'Tax (PKR)': order.tax,
-          'Total (PKR)': order.total,
-          'Payment Method': order.paymentMethod,
-          'Status': order.status,
-          'Created By': order.createdBy,
-          'Created At': order.createdAt
-        }));
+      };
 
-        // Calculate summary
-        const totalSales = allOrders.reduce((sum: number, order: Sale) => sum + order.total, 0);
-        const totalOrders = allOrders.length;
-
-        // Add summary row
-        exportData.unshift({
-          'Order Number': 'SUMMARY',
-          'Customer Name': `Total Orders: ${totalOrders}`,
-          'Customer ID': `Export Date: ${new Date().toLocaleString()}`,
-          'Date': `Total Sales: PKR ${totalSales.toLocaleString()}`,
-          'Time': '',
-          'Items Count': '',
-          'Items': '',
-          'Subtotal (PKR)': '',
-          'Discount (PKR)': '',
-          'Tax (PKR)': '',
-          'Total (PKR)': '',
-          'Payment Method': '',
-          'Status': '',
-          'Created By': '',
-          'Created At': ''
-        });
-
-        // Convert to CSV
-        const headers = Object.keys(exportData[1] || {});
-        const csvContent = [
-          headers.join(','),
-          ...exportData.map(row => 
-            headers.map(header => {
-              const value = row[header as keyof typeof row];
-              return typeof value === 'string' && value.includes(',') 
-                ? `"${value}"` 
-                : value;
-            }).join(',')
-          )
-        ].join('\n');
-
-        // Download CSV
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        toast({
-          title: "CSV Export Successful",
-          description: `Exported ${allOrders.length} orders with complete details.`,
-        });
+      // Add customer filtering
+      if (options.customerScope === 'single' && options.selectedCustomers.length === 1) {
+        params.customerId = options.selectedCustomers[0];
+      } else if (options.customerScope === 'multiple' && options.selectedCustomers.length > 0) {
+        params.customerIds = options.selectedCustomers.join(',');
       }
-    } catch (error) {
-      console.error('Failed to export orders:', error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to export orders data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setExportLoading(false);
-    }
-  };
 
-  const handleOrdersExportPDF = async () => {
-    try {
-      setExportLoading(true);
-      
-      // Fetch all orders for export (without pagination)
-      const response = await salesApi.getAll({ 
-        limit: 10000, // Large number to get all orders
-        page: 1
-      });
+      // Add time filtering
+      const now = new Date();
+      switch (options.timeScope) {
+        case 'today':
+          params.dateFrom = now.toISOString().split('T')[0];
+          params.dateTo = now.toISOString().split('T')[0];
+          break;
+        case 'weekly':
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          params.dateFrom = weekStart.toISOString().split('T')[0];
+          params.dateTo = new Date().toISOString().split('T')[0];
+          break;
+        case 'monthly':
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          params.dateFrom = monthStart.toISOString().split('T')[0];
+          params.dateTo = new Date().toISOString().split('T')[0];
+          break;
+        case 'custom':
+          if (options.startDate) params.dateFrom = options.startDate;
+          if (options.endDate) params.dateTo = options.endDate;
+          break;
+      }
+
+      // Fetch filtered orders
+      const response = await salesApi.getAll(params);
       
       if (response.success) {
-        const allOrders = response.data.sales || response.data || [];
+        const filteredOrders = response.data.sales || response.data || [];
         
         // Create PDF
         const pdf = new jsPDF();
@@ -576,11 +515,41 @@ const Orders = () => {
         pdf.setFont('helvetica', 'normal');
         pdf.text(`Export Date: ${new Date().toLocaleString()}`, margin, yPos);
         yPos += 8;
-        pdf.text(`Total Orders: ${allOrders.length}`, margin, yPos);
+        
+        // Add filter information
+        let filterText = '';
+        if (options.customerScope === 'single') {
+          filterText += 'Single Customer | ';
+        } else if (options.customerScope === 'multiple') {
+          filterText += `${options.selectedCustomers.length} Customers | `;
+        } else {
+          filterText += 'All Customers | ';
+        }
+        
+        switch (options.timeScope) {
+          case 'today':
+            filterText += 'Today';
+            break;
+          case 'weekly':
+            filterText += 'This Week';
+            break;
+          case 'monthly':
+            filterText += 'This Month';
+            break;
+          case 'custom':
+            filterText += `${options.startDate} to ${options.endDate}`;
+            break;
+          default:
+            filterText += 'All Time';
+        }
+        
+        pdf.text(`Filters: ${filterText}`, margin, yPos);
+        yPos += 8;
+        pdf.text(`Total Orders: ${filteredOrders.length}`, margin, yPos);
         yPos += 8;
 
         // Calculate total sales
-        const totalSales = allOrders.reduce((sum: number, order: Sale) => sum + order.total, 0);
+        const totalSales = filteredOrders.reduce((sum: number, order: Sale) => sum + (order.subtotal - order.discount), 0);
         pdf.text(`Total Sales: PKR ${totalSales.toLocaleString()}`, margin, yPos);
         yPos += 15;
 
@@ -588,7 +557,7 @@ const Orders = () => {
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         const headers = ['Order #', 'Customer', 'Date', 'Items', 'Total', 'Status'];
-        const colWidths = [25, 35, 25, 15, 25, 20];
+        const colWidths = [25, 35, 25, 15, 30, 20];
         let xPos = margin;
 
         headers.forEach((header, index) => {
@@ -603,7 +572,7 @@ const Orders = () => {
 
         // Table data
         pdf.setFont('helvetica', 'normal');
-        allOrders.forEach((order: Sale) => {
+        filteredOrders.forEach((order: Sale) => {
           // Check if we need a new page
           if (yPos > pageHeight - 30) {
             pdf.addPage();
@@ -611,12 +580,13 @@ const Orders = () => {
           }
 
           xPos = margin;
+          const finalTotal = order.subtotal - order.discount;
           const rowData = [
             order.orderNumber.substring(0, 12),
             (order.customerName || 'Walk-in').substring(0, 18),
             new Date(order.date).toLocaleDateString(),
             order.items.length.toString(),
-            order.total.toLocaleString(),
+            finalTotal.toLocaleString(),
             order.status
           ];
 
@@ -633,11 +603,12 @@ const Orders = () => {
         pdf.text(`Generated by Order Management System`, pageWidth / 2, yPos, { align: 'center' });
 
         // Save PDF
-        pdf.save(`orders_export_${new Date().toISOString().split('T')[0]}.pdf`);
+        const filename = `orders_export_${options.timeScope}_${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(filename);
 
         toast({
           title: "PDF Export Successful",
-          description: `Exported ${allOrders.length} orders to PDF with complete details.`,
+          description: `Exported ${filteredOrders.length} orders to PDF.`,
         });
       }
     } catch (error) {
@@ -699,8 +670,19 @@ const Orders = () => {
     );
   }
 
+  // Get unique customers for the export modal
+  const uniqueCustomers = orders.reduce((acc: Array<{id: number, name: string}>, order) => {
+    if (order.customerId && !acc.find(c => c.id === order.customerId)) {
+      acc.push({
+        id: order.customerId,
+        name: order.customerName || `Customer #${order.customerId}`
+      });
+    }
+    return acc;
+  }, []);
+
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-slate-50">
+    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen ">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
@@ -712,21 +694,7 @@ const Orders = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={handleOrdersExportCSV}
-            disabled={exportLoading}
-            className="bg-green-600 hover:bg-green-700 text-white border-green-600"
-          >
-            {exportLoading ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            {exportLoading ? 'Exporting...' : 'CSV Export'}
-          </Button>
-
-          <Button 
-            variant="outline" 
-            onClick={handleOrdersExportPDF}
+            onClick={() => setIsPDFExportModalOpen(true)}
             disabled={exportLoading}
             className="bg-red-600 hover:bg-red-700 text-white border-red-600"
           >
@@ -856,7 +824,7 @@ const Orders = () => {
             />
           </div>
 
-          {/* Orders Table - UPDATED Actions Column */}
+          {/* Orders Table */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -872,57 +840,61 @@ const Orders = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-slate-400" />
-                        {order.customerName || "Walk-in"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-slate-400" />
-                        {new Date(order.date).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {order.items.length} item{order.items.length > 1 ? 's' : ''}
-                        <div className="text-xs text-slate-500">
-                          {order.items.slice(0, 2).map(item => item.productName).join(', ')}
-                          {order.items.length > 2 && '...'}
+                {filteredOrders.map((order) => {
+                  // Calculate final total without tax (subtotal - discount)
+                  const finalTotal = order.subtotal - order.discount;
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-slate-400" />
+                          {order.customerName || "Walk-in"}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">Rs. {order.total.toLocaleString()}</TableCell>
-                    <TableCell>{getPaymentMethodBadge(order.paymentMethod)}</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                          onClick={() => handleViewOrder(order)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-red-300 text-red-700 hover:bg-red-50"
-                          onClick={() => handleOrderPDF(order)}
-                        >
-                          <FileText className="h-3 w-3 mr-1" />
-                          PDF
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-slate-400" />
+                          {new Date(order.date).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                          <div className="text-xs text-slate-500">
+                            {order.items.slice(0, 2).map(item => item.productName).join(', ')}
+                            {order.items.length > 2 && '...'}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">Rs. {finalTotal.toLocaleString()}</TableCell>
+                      <TableCell>{getPaymentMethodBadge(order.paymentMethod)}</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                            onClick={() => handleViewOrder(order)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-300 text-red-700 hover:bg-red-50"
+                            onClick={() => handleOrderPDF(order)}
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            PDF
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -973,12 +945,21 @@ const Orders = () => {
         </CardContent>
       </Card>
 
-      {/* NEW: Order Details Modal */}
+      {/* Order Details Modal */}
       <OrderDetailsModal
         open={isOrderDetailsOpen}
         onOpenChange={setIsOrderDetailsOpen}
         order={selectedOrder}
         onOrderUpdated={fetchOrders}
+      />
+
+      {/* PDF Export Modal */}
+      <PDFExportModal
+        open={isPDFExportModalOpen}
+        onOpenChange={setIsPDFExportModalOpen}
+        onExport={handleAdvancedPDFExport}
+        customers={uniqueCustomers}
+        isLoading={exportLoading}
       />
     </div>
   );

@@ -1,4 +1,5 @@
-import { Bell, Package, User, Menu, Home, ChevronRight } from "lucide-react";
+
+import { Bell, Package, User, Menu, Home, ChevronRight, Maximize, Minimize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,41 @@ export function Header() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Fullscreen toggle function
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
+        console.error('Error attempting to enable fullscreen:', err);
+        toast({
+          title: "Fullscreen Error",
+          description: "Could not enter fullscreen mode",
+          variant: "destructive"
+        });
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
+        console.error('Error attempting to exit fullscreen:', err);
+      });
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
@@ -142,7 +178,13 @@ export function Header() {
     let currentPath = '';
     pathSegments.forEach(segment => {
       currentPath += `/${segment}`;
-      const name = segment.charAt(0).toUpperCase() + segment.slice(1).replace('-', ' ');
+      let name = segment.charAt(0).toUpperCase() + segment.slice(1).replace('-', ' ');
+      
+      // Special case for reports route
+      if (segment === 'reports') {
+        name = 'Ask AI';
+      }
+      
       breadcrumbs.push({ name, path: currentPath });
     });
     
@@ -188,6 +230,21 @@ export function Header() {
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Fullscreen Toggle Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleFullscreen}
+            className="h-8 w-8 md:h-10 md:w-10 hover:bg-accent hover:text-accent-foreground"
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            {isFullscreen ? (
+              <Minimize className="h-4 w-4 md:h-5 md:w-5" />
+            ) : (
+              <Maximize className="h-4 w-4 md:h-5 md:w-5" />
+            )}
+          </Button>
+
           {/* Pending Orders Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

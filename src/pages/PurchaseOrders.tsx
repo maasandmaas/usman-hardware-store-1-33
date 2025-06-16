@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Search, Plus, Calendar, Truck, DollarSign, User, Package, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { FileText, Search, Plus, Calendar, Truck, DollarSign, User, Package, CheckCircle, Clock, XCircle, Loader2, Eye, Edit, Trash2, Send, PackageCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { purchaseOrdersApi, suppliersApi, productsApi } from "@/services/api";
@@ -29,6 +30,7 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from "@/components/ui/pagination";
+import { EnhancedPurchaseOrderForm } from "@/components/purchase-orders/EnhancedPurchaseOrderForm";
 
 const PurchaseOrders = () => {
   const { toast } = useToast();
@@ -37,28 +39,23 @@ const PurchaseOrders = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [statusUpdateOrder, setStatusUpdateOrder] = useState<any>(null);
+  const [newStatus, setNewStatus] = useState("");
+  const [statusNotes, setStatusNotes] = useState("");
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const itemsPerPage = 20;
 
-  // Fetch purchase orders
+  // Fetch purchase orders with updated parameters
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['purchase-orders', currentPage, filterStatus, searchTerm],
     queryFn: () => purchaseOrdersApi.getAll({
       page: currentPage,
       limit: itemsPerPage,
       status: filterStatus === 'all' ? undefined : filterStatus,
+      search: searchTerm || undefined,
     }),
-  });
-
-  // Fetch suppliers for the create form
-  const { data: suppliersData } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: () => suppliersApi.getAll({ limit: 100 }),
-  });
-
-  // Fetch products for the create form
-  const { data: productsData } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => productsApi.getAll({ limit: 100 }),
   });
 
   // Create purchase order mutation
@@ -73,6 +70,7 @@ const PurchaseOrders = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Create error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create purchase order",
@@ -81,12 +79,65 @@ const PurchaseOrders = () => {
     },
   });
 
-  const orders = ordersData?.data?.purchaseOrders || [];
-  const pagination = ordersData?.data?.pagination;
-  const suppliers = suppliersData?.data?.suppliers || suppliersData?.data || [];
-  const products = productsData?.data?.products || productsData?.data || [];
+  // Update status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status, notes }: { id: number, status: string, notes?: string }) => 
+      purchaseOrdersApi.updateStatus(id, status, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      setStatusUpdateOrder(null);
+      setNewStatus("");
+      setStatusNotes("");
+      setIsStatusDialogOpen(false);
+      toast({
+        title: "Status Updated",
+        description: "Purchase order status has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Status update error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update purchase order status",
+        variant: "destructive",
+      });
+    },
+  });
 
-  // Filter orders by search term
+  // Delete order mutation
+  const deleteOrderMutation = useMutation({
+    mutationFn: purchaseOrdersApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      toast({
+        title: "Purchase Order Deleted",
+        description: "The purchase order has been deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Delete error:', error);
+      // Handle specific error for non-draft orders
+      if (error.message && (error.message.includes('400') || error.message.includes('draft'))) {
+        toast({
+          title: "Cannot Delete Order",
+          description: "Only draft purchase orders can be deleted",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete purchase order",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Fixed data extraction to match API response structure
+  const orders = ordersData?.data?.purchaseOrders || ordersData?.purchaseOrders || [];
+  const pagination = ordersData?.data?.pagination || ordersData?.pagination;
+
+  // Filter orders by search term (additional client-side filtering)
   const filteredOrders = orders.filter((order: any) =>
     order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -106,21 +157,69 @@ const PurchaseOrders = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "draft": return <Clock className="h-4 w-4" />;
-      case "sent": return <Truck className="h-4 w-4" />;
+      case "sent": return <Send className="h-4 w-4" />;
       case "confirmed": return <CheckCircle className="h-4 w-4" />;
-      case "received": return <Package className="h-4 w-4" />;
+      case "received": return <PackageCheck className="h-4 w-4" />;
       case "cancelled": return <XCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
     }
   };
 
+  const getAvailableStatusTransitions = (currentStatus: string) => {
+    switch (currentStatus) {
+      case "draft":
+        return [
+          { value: "sent", label: "Send to Supplier" },
+          { value: "cancelled", label: "Cancel Order" }
+        ];
+      case "sent":
+        return [
+          { value: "confirmed", label: "Mark as Confirmed" },
+          { value: "cancelled", label: "Cancel Order" }
+        ];
+      case "confirmed":
+        return [
+          { value: "received", label: "Mark as Received" },
+          { value: "cancelled", label: "Cancel Order" }
+        ];
+      default:
+        return [];
+    }
+  };
+
   const handleCreateOrder = (formData: any) => {
+    console.log('Creating order with data:', formData);
     createOrderMutation.mutate(formData);
+  };
+
+  const handleStatusUpdate = () => {
+    if (!statusUpdateOrder || !newStatus) return;
+    
+    console.log('Updating status:', { id: statusUpdateOrder.id, status: newStatus, notes: statusNotes });
+    updateStatusMutation.mutate({
+      id: statusUpdateOrder.id,
+      status: newStatus,
+      notes: statusNotes
+    });
+  };
+
+  const handleViewOrder = (order: any) => {
+    console.log('Viewing order:', order);
+    setSelectedOrder(order);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditStatus = (order: any) => {
+    setStatusUpdateOrder(order);
+    setNewStatus("");
+    setStatusNotes("");
+    setIsStatusDialogOpen(true);
   };
 
   // Calculate stats from current data
   const statsData = {
     total: orders.length,
+    draft: orders.filter((o: any) => o.status === "draft").length,
     confirmed: orders.filter((o: any) => o.status === "confirmed").length,
     received: orders.filter((o: any) => o.status === "received").length,
     totalValue: orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
@@ -135,13 +234,13 @@ const PurchaseOrders = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="flex-1 p-6 space-y-6  min-h-screen">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Purchase Orders</h1>
-            <p className="text-gray-600">Manage purchase orders and supplier transactions</p>
+            <h1 className="text-3xl font-bold">Purchase Orders</h1>
+            <p className="text-gray-400">Manage purchase orders and supplier transactions</p>
           </div>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -151,15 +250,13 @@ const PurchaseOrders = () => {
               New Purchase Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+            <DialogHeader className="p-6 pb-0">
               <DialogTitle>Create New Purchase Order</DialogTitle>
             </DialogHeader>
-            <CreateOrderForm 
+            <EnhancedPurchaseOrderForm 
               onSubmit={handleCreateOrder} 
               onClose={() => setIsCreateDialogOpen(false)}
-              suppliers={suppliers}
-              products={products}
               isLoading={createOrderMutation.isPending}
             />
           </DialogContent>
@@ -167,7 +264,7 @@ const PurchaseOrders = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="border-gray-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -175,6 +272,18 @@ const PurchaseOrders = () => {
               <div>
                 <p className="text-sm text-gray-500">Total Orders</p>
                 <p className="text-xl font-bold text-gray-900">{statsData.total}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-500">Draft</p>
+                <p className="text-xl font-bold text-blue-600">{statsData.draft}</p>
               </div>
             </div>
           </CardContent>
@@ -267,7 +376,9 @@ const PurchaseOrders = () => {
                   <TableCell className="font-medium">{order.orderNumber}</TableCell>
                   <TableCell>{order.supplierName}</TableCell>
                   <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(order.expectedDelivery).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {order.expectedDelivery ? new Date(order.expectedDelivery).toLocaleDateString() : 'Not set'}
+                  </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(order.status)}>
                       {getStatusIcon(order.status)}
@@ -276,14 +387,76 @@ const PurchaseOrders = () => {
                   </TableCell>
                   <TableCell>Rs. {order.total?.toLocaleString()}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewOrder(order)}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
                         View
                       </Button>
-                      {order.status === "confirmed" && (
-                        <Button variant="outline" size="sm">
-                          Receive
+                      
+                      {getAvailableStatusTransitions(order.status).length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditStatus(order)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Edit className="h-3 w-3 mr-1" />
+                          )}
+                          Update
                         </Button>
+                      )}
+
+                      {order.status === "draft" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-red-600"
+                              disabled={deleteOrderMutation.isPending}
+                            >
+                              {deleteOrderMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3 mr-1" />
+                              )}
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this purchase order? This action cannot be undone.
+                                Only draft orders can be deleted.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => deleteOrderMutation.mutate(order.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={deleteOrderMutation.isPending}
+                              >
+                                {deleteOrderMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  "Delete"
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </div>
                   </TableCell>
@@ -334,219 +507,165 @@ const PurchaseOrders = () => {
           <p className="text-gray-500">Try adjusting your search criteria or create a new purchase order.</p>
         </div>
       )}
-    </div>
-  );
-};
 
-// Create Order Form Component
-const CreateOrderForm = ({ 
-  onSubmit, 
-  onClose, 
-  suppliers, 
-  products, 
-  isLoading 
-}: { 
-  onSubmit: (data: any) => void; 
-  onClose: () => void;
-  suppliers: any[];
-  products: any[];
-  isLoading: boolean;
-}) => {
-  const [formData, setFormData] = useState({
-    supplierId: "",
-    expectedDelivery: "",
-    notes: "",
-    items: [{ productId: "", quantity: 1, unitPrice: 0 }]
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate form
-    if (!formData.supplierId || !formData.expectedDelivery || formData.items.length === 0) {
-      return;
-    }
-
-    // Filter out empty items
-    const validItems = formData.items.filter(item => item.productId && item.quantity > 0);
-    
-    if (validItems.length === 0) {
-      return;
-    }
-
-    const submitData = {
-      supplierId: parseInt(formData.supplierId),
-      expectedDelivery: formData.expectedDelivery,
-      notes: formData.notes,
-      items: validItems.map(item => ({
-        productId: parseInt(item.productId),
-        quantity: item.quantity,
-        unitPrice: item.unitPrice
-      }))
-    };
-
-    onSubmit(submitData);
-  };
-
-  const addItem = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { productId: "", quantity: 1, unitPrice: 0 }]
-    });
-  };
-
-  const removeItem = (index: number) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index)
-    });
-  };
-
-  const updateItem = (index: number, field: string, value: any) => {
-    const updatedItems = [...formData.items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    
-    // Auto-populate unit price when product is selected
-    if (field === 'productId' && value) {
-      const product = products.find(p => p.id.toString() === value);
-      if (product) {
-        updatedItems[index].unitPrice = product.price || 0;
-      }
-    }
-    
-    setFormData({ ...formData, items: updatedItems });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="supplier">Supplier *</Label>
-          <Select
-            value={formData.supplierId}
-            onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
-            required
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select supplier" />
-            </SelectTrigger>
-            <SelectContent>
-              {suppliers.map((supplier) => (
-                <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                  {supplier.name} - {supplier.city || supplier.address}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="expectedDelivery">Expected Delivery *</Label>
-          <Input
-            id="expectedDelivery"
-            type="date"
-            value={formData.expectedDelivery}
-            onChange={(e) => setFormData({ ...formData, expectedDelivery: e.target.value })}
-            required
-          />
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Items *</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addItem}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Item
-          </Button>
-        </div>
-        
-        {formData.items.map((item, index) => (
-          <div key={index} className="grid grid-cols-12 gap-2 mb-2 items-end">
-            <div className="col-span-5">
-              <Select
-                value={item.productId}
-                onValueChange={(value) => updateItem(index, "productId", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id.toString()}>
-                      {product.name} - Rs. {product.price}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2">
-              <Input
-                type="number"
-                placeholder="Qty"
-                value={item.quantity}
-                onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 0)}
-                min="1"
-              />
-            </div>
-            <div className="col-span-3">
-              <Input
-                type="number"
-                placeholder="Unit Price"
-                value={item.unitPrice}
-                onChange={(e) => updateItem(index, "unitPrice", parseFloat(e.target.value) || 0)}
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div className="col-span-2">
-              {formData.items.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  className="w-full"
+      {/* Status Update Dialog */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Order Status</DialogTitle>
+          </DialogHeader>
+          {statusUpdateOrder && (
+            <div className="space-y-4">
+              <div>
+                <Label>Order: {statusUpdateOrder.orderNumber}</Label>
+                <p className="text-sm text-gray-600">Current Status: {statusUpdateOrder.status}</p>
+              </div>
+              <div>
+                <Label htmlFor="newStatus">New Status</Label>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select new status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableStatusTransitions(statusUpdateOrder.status).map((transition) => (
+                      <SelectItem key={transition.value} value={transition.value}>
+                        {transition.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="statusNotes">Notes (Optional)</Label>
+                <Textarea
+                  id="statusNotes"
+                  value={statusNotes}
+                  onChange={(e) => setStatusNotes(e.target.value)}
+                  placeholder="Add any notes about this status change..."
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleStatusUpdate}
+                  disabled={!newStatus || updateStatusMutation.isPending}
                 >
-                  Remove
+                  {updateStatusMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
+                  Update Status
                 </Button>
+                <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Details Modal */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Purchase Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Order Number</Label>
+                  <p className="font-medium">{selectedOrder.orderNumber}</p>
+                </div>
+                <div>
+                  <Label>Supplier</Label>
+                  <p className="font-medium">{selectedOrder.supplierName}</p>
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <p>{new Date(selectedOrder.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <Label>Expected Delivery</Label>
+                  <p>
+                    {selectedOrder.expectedDelivery 
+                      ? new Date(selectedOrder.expectedDelivery).toLocaleDateString() 
+                      : 'Not set'
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Badge className={getStatusColor(selectedOrder.status)}>
+                    {getStatusIcon(selectedOrder.status)}
+                    <span className="ml-1 capitalize">{selectedOrder.status}</span>
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Total Amount</Label>
+                  <p className="font-bold text-lg">Rs. {selectedOrder.total?.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {selectedOrder.items && selectedOrder.items.length > 0 && (
+                <div>
+                  <Label>Items</Label>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead>Total</TableHead>
+                        {selectedOrder.status === 'received' && (
+                          <>
+                            <TableHead>Received</TableHead>
+                            <TableHead>Condition</TableHead>
+                          </>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.productName}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>Rs. {item.unitPrice?.toLocaleString()}</TableCell>
+                          <TableCell>Rs. {item.total?.toLocaleString()}</TableCell>
+                          {selectedOrder.status === 'received' && (
+                            <>
+                              <TableCell>{item.quantityReceived || 0}</TableCell>
+                              <TableCell>
+                                <Badge variant={item.itemCondition === 'good' ? 'default' : 'destructive'}>
+                                  {item.itemCondition || 'good'}
+                                </Badge>
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {selectedOrder.notes && (
+                <div>
+                  <Label>Notes</Label>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              {selectedOrder.createdBy && (
+                <div>
+                  <Label>Created By</Label>
+                  <p className="text-sm text-gray-600">{selectedOrder.createdBy}</p>
+                </div>
               )}
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Additional notes or instructions"
-          rows={3}
-        />
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button 
-          type="submit" 
-          className="flex-1 bg-gray-800 hover:bg-gray-900"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            "Create Purchase Order"
           )}
-        </Button>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

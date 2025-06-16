@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { User, Package, Calendar, DollarSign, RotateCcw, AlertTriangle, Minus, Plus, ArrowLeft, Edit2, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { salesApi, customersApi } from "@/services/api";
+import { useCustomerBalance } from "@/hooks/useCustomerBalance";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface OrderDetailsModalProps {
 
 export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }: OrderDetailsModalProps) => {
   const { toast } = useToast();
+  const { updateBalanceForOrderStatusChange } = useCustomerBalance();
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [adjustmentItems, setAdjustmentItems] = useState<any[]>([]);
   const [adjustmentNotes, setAdjustmentNotes] = useState("");
@@ -100,6 +102,24 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
       
       if (editMode === 'status') {
         console.log('Updating status to:', editValues.status);
+        
+        // Handle status changes with customer balance updates
+        if (order.customerId && editValues.status !== order.status) {
+          try {
+            await updateBalanceForOrderStatusChange(
+              order.id,
+              order.customerId,
+              order.orderNumber,
+              order.total,
+              editValues.status,
+              order.status
+            );
+          } catch (error) {
+            console.error('Balance update failed:', error);
+            // Continue with status update even if balance update fails
+          }
+        }
+        
         const response = await salesApi.updateStatus(order.id, { status: editValues.status });
         console.log('Status update response:', response);
         
@@ -111,20 +131,33 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         } else {
           throw new Error(response.message || 'Failed to update status');
         }
-      } else if (editMode === 'payment' || editMode === 'customer') {
-        const updateData: any = {};
+      } else if (editMode === 'payment') {
+        console.log('Updating payment method from', order.paymentMethod, 'to:', editValues.paymentMethod);
         
-        if (editMode === 'payment') {
-          updateData.paymentMethod = editValues.paymentMethod;
-          console.log('Updating payment method to:', editValues.paymentMethod);
-        } else if (editMode === 'customer') {
-          updateData.customerId = editValues.customerId;
-          console.log('Updating customer to:', editValues.customerId);
+        // Use the existing details endpoint for payment method updates
+        const response = await fetch(`https://zaidawn.site/wp-json/ims/v1/sales/${order.id}/details`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            paymentMethod: editValues.paymentMethod 
+          })
+        });
+        
+        const result = await response.json();
+        console.log('Payment method update response:', result);
+        
+        if (result.success) {
+          toast({
+            title: "Payment Method Updated",
+            description: "Payment method and customer balance updated successfully",
+          });
+        } else {
+          throw new Error(result.message || 'Failed to update payment method');
         }
+      } else if (editMode === 'customer') {
+        const updateData = { customerId: editValues.customerId };
+        console.log('Updating customer to:', editValues.customerId);
         
-        console.log('Sending update data:', updateData);
-        
-        // Using direct fetch for now since salesApi doesn't have a general update method
         const response = await fetch(`https://zaidawn.site/wp-json/ims/v1/sales/${order.id}/details`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -136,8 +169,8 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         
         if (result.success) {
           toast({
-            title: "Order Updated",
-            description: `${editMode === 'payment' ? 'Payment method' : 'Customer'} has been updated successfully`,
+            title: "Customer Updated",
+            description: "Customer has been updated successfully",
           });
         } else {
           throw new Error(result.message || 'Update failed');
@@ -182,6 +215,8 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Pending</Badge>;
       case "cancelled":
         return <Badge className="bg-red-100 text-red-700 border-red-200">Cancelled</Badge>;
+      case "credit":
+        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Credit</Badge>;
       default:
         return <Badge className="bg-gray-100 text-gray-700 border-gray-200">{status}</Badge>;
     }
@@ -377,6 +412,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="credit">Credit</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button size="sm" onClick={handleEditSave} disabled={editLoading}>
@@ -548,7 +584,6 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
               </div>
             </div>
 
-            {/* Return Items Form */}
             <div className="space-y-4">
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                 <h4 className="font-medium text-orange-800 mb-2">Order: {order.orderNumber}</h4>
@@ -656,7 +691,6 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                 />
               </div>
 
-              {/* Summary */}
               {adjustmentItems.some(item => item.returnQuantity > 0) && (
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="p-4">

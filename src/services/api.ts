@@ -251,7 +251,6 @@ export const customersApi = {
       body: JSON.stringify(customer),
     }),
 
-  // NEW: Delete customer endpoint
   delete: (id: number) =>
     apiRequest<ApiResponse<any>>(`/customers/${id}`, {
       method: 'DELETE',
@@ -292,14 +291,12 @@ export const salesApi = {
       body: JSON.stringify(status),
     }),
 
-  // NEW: Order adjustment endpoint
   adjustOrder: (id: number, adjustment: any) =>
     apiRequest<ApiResponse<any>>(`/sales/${id}/adjust`, {
       method: 'POST',
       body: JSON.stringify(adjustment),
     }),
 
-  // NEW: PDF receipt generation endpoint
   generatePDF: (id: number) => 
     apiRequest<Blob>(`/sales/${id}/pdf`, {
       headers: {
@@ -420,7 +417,7 @@ export const suppliersApi = {
     }),
 };
 
-// Purchase Orders API
+// Purchase Orders API - Fixed to match new WordPress API structure
 export const purchaseOrdersApi = {
   getAll: (params?: {
     page?: number;
@@ -429,11 +426,14 @@ export const purchaseOrdersApi = {
     status?: string;
     dateFrom?: string;
     dateTo?: string;
+    search?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value.toString());
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
       });
     }
     const query = queryParams.toString();
@@ -448,25 +448,48 @@ export const purchaseOrdersApi = {
       body: JSON.stringify(order),
     }),
   
+  update: (id: number, order: any) =>
+    apiRequest<ApiResponse<any>>(`/purchase-orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(order),
+    }),
+  
+  // Fixed: Simple status update endpoint that matches the API
+  updateStatus: (id: number, status: string, notes?: string) =>
+    apiRequest<ApiResponse<any>>(`/purchase-orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    }),
+  
   receive: (id: number, data: any) =>
     apiRequest<ApiResponse<any>>(`/purchase-orders/${id}/receive`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+
+  delete: (id: number) =>
+    apiRequest<ApiResponse<any>>(`/purchase-orders/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
-// Quotations API
+// Quotations API - Updated with all endpoints
 export const quotationsApi = {
   getAll: (params?: {
     page?: number;
     limit?: number;
     customerId?: number;
     status?: string;
+    quoteNumber?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value.toString());
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
       });
     }
     const query = queryParams.toString();
@@ -475,10 +498,32 @@ export const quotationsApi = {
   
   getById: (id: number) => apiRequest<ApiResponse<any>>(`/quotations/${id}`),
   
-  create: (quotation: any) =>
+  create: (quotation: any) => 
     apiRequest<ApiResponse<any>>('/quotations', {
       method: 'POST',
       body: JSON.stringify(quotation),
+    }),
+  
+  update: (id: number, quotation: any) =>
+    apiRequest<ApiResponse<any>>(`/quotations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(quotation),
+    }),
+  
+  delete: (id: number) =>
+    apiRequest<ApiResponse<any>>(`/quotations/${id}`, {
+      method: 'DELETE',
+    }),
+  
+  send: (id: number) =>
+    apiRequest<ApiResponse<any>>(`/quotations/${id}/send`, {
+      method: 'PUT',
+    }),
+  
+  updateStatus: (id: number, status: string) =>
+    apiRequest<ApiResponse<any>>(`/quotations/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
     }),
   
   convertToSale: (id: number) =>

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Package, Search, Plus, Minus, Pin, PinOff, Filter, Menu, X, AlertTriangle } from "lucide-react";
+import { Package, Search, Plus, Minus, Pin, PinOff, Filter, Menu, X, AlertTriangle, Maximize, Minimize } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { salesApi, customersApi, productsApi } from "@/services/api";
 import { QuickCustomerForm } from "@/components/QuickCustomerForm";
@@ -48,6 +48,41 @@ const Sales = () => {
   const [quantityInputs, setQuantityInputs] = useState<{[key: number]: string}>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Fullscreen toggle function
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
+        console.error('Error attempting to enable fullscreen:', err);
+        toast({
+          title: "Fullscreen Error",
+          description: "Could not enter fullscreen mode",
+          variant: "destructive"
+        });
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
+        console.error('Error attempting to exit fullscreen:', err);
+      });
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -409,6 +444,7 @@ const Sales = () => {
       pdf.setTextColor(0, 0, 0);
       pdf.setFillColor(248, 250, 252);
       pdf.roundedRect(6, yPos, pageWidth - 12, 10, 1, 1, 'F');
+      
       pdf.setDrawColor(26, 54, 93);
       pdf.setLineWidth(0.3);
       pdf.roundedRect(6, yPos, pageWidth - 12, 10, 1, 1, 'S');
@@ -743,6 +779,22 @@ const Sales = () => {
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full hidden md:inline">
                 {totalCartItems} items - PKR {totalCartValue.toLocaleString()}
               </span>
+              
+              {/* Fullscreen Toggle Button */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={toggleFullscreen}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize className="h-4 w-4" />
+                ) : (
+                  <Maximize className="h-4 w-4" />
+                )}
+              </Button>
+              
               <Button 
                 size="sm" 
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
@@ -869,8 +921,8 @@ const Sales = () => {
       {isMobile && isCartOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
-          <div className="fixed right-0 top-0 h-full w-80 max-w-[90vw] bg-background shadow-lg">
-            <div className="flex items-center justify-between p-4 border-b">
+          <div className="fixed right-0 top-0 h-full w-80 max-w-[90vw] bg-background shadow-lg flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
               <h2 className="text-lg font-semibold">Cart ({cart.length})</h2>
               <Button
                 variant="ghost"
@@ -883,85 +935,82 @@ const Sales = () => {
             </div>
             
             {/* Mobile Cart Content */}
-            <div className="flex flex-col h-full">
-              {/* Mobile Cart Items */}
-              <div className="flex-1 overflow-auto p-4">
-                {cart.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                    <p>No items in cart</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {cart.map((item) => (
-                      <Card key={item.productId} className="p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm">{item.name}</h4>
-                            <p className="text-xs text-muted-foreground">{item.sku}</p>
-                          </div>
+            <div className="flex-1 overflow-auto p-4">
+              {cart.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                  <p>No items in cart</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map((item) => (
+                    <Card key={item.productId} className="p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{item.name}</h4>
+                          <p className="text-xs text-muted-foreground">{item.sku}</p>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-6 w-6 p-0 text-red-500"
+                          onClick={() => removeFromCart(item.productId)}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <Button 
                             size="sm" 
-                            variant="ghost" 
-                            className="h-6 w-6 p-0 text-red-500"
-                            onClick={() => removeFromCart(item.productId)}
+                            variant="outline" 
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
                           >
-                            ×
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="text-sm font-medium">{item.quantity} {item.unit}</span>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-6 w-6 p-0"
-                              onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="text-sm font-medium">{item.quantity} {item.unit}</span>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-6 w-6 p-0"
-                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <span className="font-bold text-green-600 text-sm">
-                            PKR {(item.price * item.quantity).toFixed(2)}
-                          </span>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Mobile Checkout */}
-              {cart.length > 0 && (
-                <div className="p-4 border-t bg-background">
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between font-bold text-lg">
-                      <span>Total:</span>
-                      <span className="text-green-600">PKR {totalCartValue.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => {
-                      handleCheckout();
-                      setIsCartOpen(false);
-                    }}
-                  >
-                    Complete Sale ({paymentMethod})
-                  </Button>
+                        <span className="font-bold text-green-600 text-sm">
+                          PKR {(item.price * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
               )}
             </div>
+            
+            {/* Mobile Checkout: sticky always visible at the bottom */}
+            {cart.length > 0 && (
+              <div className="border-t bg-background sticky bottom-0 left-0 right-0 w-full p-4 z-10">
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total:</span>
+                    <span className="text-green-600">PKR {totalCartValue.toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    handleCheckout();
+                    setIsCartOpen(false);
+                  }}
+                >
+                  Complete Sale ({paymentMethod})
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

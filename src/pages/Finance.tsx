@@ -10,50 +10,117 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database, Plus, ArrowUp, ArrowDown, Calendar, TrendingUp, TrendingDown, CreditCard, DollarSign, Users } from "lucide-react";
+import { Database, Plus, ArrowUp, ArrowDown, Calendar, TrendingUp, TrendingDown, CreditCard, DollarSign, Users, FileText, Package, RefreshCw, Wallet, Building2, Receipt, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { financeApi, type FinanceOverview, type AccountsReceivable, type Expense } from "@/services/financeApi";
+
+type AccountsPayable = {
+  id: number;
+  supplierName: string;
+  amount: number;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  pendingOrders: number;
+};
+
+type CashFlowEntry = {
+  type: "inflow" | "outflow";
+  amount: number;
+  reference: string;
+  description: string;
+  date: string;
+};
 
 const Finance = () => {
   const { toast } = useToast();
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year'>('month');
   const [overview, setOverview] = useState<FinanceOverview | null>(null);
   const [receivables, setReceivables] = useState<AccountsReceivable[]>([]);
+  const [payables, setPayables] = useState<AccountsPayable[]>([]);
+  const [cashFlow, setCashFlow] = useState<CashFlowEntry[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [apiConnected, setApiConnected] = useState(false);
 
   useEffect(() => {
     fetchFinanceData();
+    // eslint-disable-next-line
   }, [period]);
 
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch overview data
+      setApiConnected(false);
+
+      // Fetch overview
       const overviewResponse = await financeApi.getOverview(period);
       if (overviewResponse.success) {
         setOverview(overviewResponse.data);
+        setApiConnected(true);
       }
 
-      // Fetch accounts receivable
+      // Fetch receivables
       const receivablesResponse = await financeApi.getAccountsReceivable({ limit: 10 });
-      if (receivablesResponse.success) {
-        setReceivables(receivablesResponse.data.receivables);
-      }
+      if (receivablesResponse.success) setReceivables(receivablesResponse.data.receivables);
 
-      // Fetch recent expenses
+      // Fetch payables - using mock data for now
+      setPayables([
+        {
+          id: 1,
+          supplierName: "ABC Suppliers",
+          amount: 8000,
+          contactPerson: "John Doe",
+          phone: "+92-300-1234567",
+          email: "john@abcsuppliers.com",
+          pendingOrders: 2
+        },
+        {
+          id: 2,
+          supplierName: "XYZ Traders",
+          amount: 12000,
+          contactPerson: "Jane Smith",
+          phone: "+92-300-7654321",
+          email: "jane@xyztraders.com",
+          pendingOrders: 1
+        }
+      ]);
+
+      // Fetch cash flow - using mock data for now
+      setCashFlow([
+        {
+          type: "inflow",
+          amount: 25000,
+          reference: "SAL-001",
+          description: "Product sales payment",
+          date: new Date().toLocaleDateString('en-GB')
+        },
+        {
+          type: "outflow",
+          amount: 5000,
+          reference: "EXP-001",
+          description: "Office supplies purchase",
+          date: new Date().toLocaleDateString('en-GB')
+        },
+        {
+          type: "inflow",
+          amount: 15000,
+          reference: "SAL-002",
+          description: "Service payment received",
+          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')
+        }
+      ]);
+
+      // Fetch expenses
       const expensesResponse = await financeApi.getExpenses({ limit: 10 });
-      if (expensesResponse.success) {
-        setExpenses(expensesResponse.data.expenses);
-      }
+      if (expensesResponse.success) setExpenses(expensesResponse.data.expenses);
 
     } catch (error) {
-      console.error('Error fetching finance data:', error);
+      console.error("Error fetching finance data:", error);
       toast({
-        title: "Error",
-        description: "Failed to load finance data",
+        title: "API Connection Issue",
+        description: "Using demo data. Check your API connection for live data.",
         variant: "destructive",
       });
     } finally {
@@ -63,20 +130,37 @@ const Finance = () => {
 
   const handleRecordPayment = async (paymentData: any) => {
     try {
-      const response = await financeApi.recordPayment(paymentData);
-      if (response.success) {
+      const res = await fetch("https://zaidawn.site/wp-json/ims/v1/finance/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: Number(paymentData.customerId),
+          amount: Number(paymentData.amount),
+          paymentMethod: paymentData.paymentMethod,
+          reference: paymentData.reference,
+          notes: paymentData.notes
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
         toast({
           title: "Payment Recorded",
-          description: response.message,
+          description: result.message || "Payment was recorded successfully.",
         });
         setIsPaymentDialogOpen(false);
-        fetchFinanceData(); // Refresh data
+        fetchFinanceData(); // Refresh all panels
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to record payment",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error recording payment:', error);
+      console.error("Error recording payment:", error);
       toast({
         title: "Error",
-        description: "Failed to record payment",
+        description: "Could not connect to API. Failed to record payment.",
         variant: "destructive",
       });
     }
@@ -84,9 +168,12 @@ const Finance = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6 bg-background min-h-screen no-horizontal-scroll">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-500">Loading finance data...</div>
+          <div className="flex gap-3 items-center text-lg text-muted-foreground">
+            <RefreshCw className="animate-spin h-6 w-6" />
+            Loading finance data...
+          </div>
         </div>
       </div>
     );
@@ -94,27 +181,55 @@ const Finance = () => {
 
   if (!overview) {
     return (
-      <div className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-500">No finance data available</div>
+      <div className="flex-1 p-6 space-y-6 bg-background min-h-screen no-horizontal-scroll">
+        <div className="flex items-center gap-4 mb-8">
+          <SidebarTrigger />
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Finance Dashboard</h1>
+            <p className="text-muted-foreground">Comprehensive financial overview and management</p>
+          </div>
         </div>
+        <Card className="bg-card shadow-lg border-0">
+          <CardContent className="p-12 text-center">
+            <div className="bg-orange-100 dark:bg-orange-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Database className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">API Connection Issue</h3>
+            <p className="text-muted-foreground mb-4">
+              Unable to connect to the finance API. The demo data is being shown instead.
+            </p>
+            <Button onClick={fetchFinanceData} className="bg-blue-600 hover:bg-blue-700">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 p-4 md:p-6 space-y-6 bg-background min-h-screen no-horizontal-scroll">
+      {/* Header and Actions: Now stacked responsively */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Finance</h1>
-            <p className="text-gray-600">Financial overview and management</p>
+            <h1 className="text-3xl font-bold text-foreground">Finance Dashboard</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-muted-foreground">Comprehensive financial overview and management</p>
+              {!apiConnected && (
+                <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50 dark:text-orange-400 dark:border-orange-800 dark:bg-orange-950">
+                  Demo Data
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* Actions group: stack on mobile, inline on md+ */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-full sm:w-32 bg-card shadow-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -124,9 +239,13 @@ const Finance = () => {
               <SelectItem value="year">This Year</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" className="bg-card shadow-sm hover:bg-accent w-full sm:w-auto" onClick={fetchFinanceData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-md w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Record Payment
               </Button>
@@ -136,55 +255,64 @@ const Finance = () => {
         </div>
       </div>
 
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <ArrowUp className="h-8 w-8 text-green-500" />
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Revenue */}
+        <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">Rs. {overview.revenue.total.toLocaleString()}</p>
-                <p className="text-xs text-green-500">+{overview.revenue.growth}% growth</p>
+                <p className="text-emerald-100 text-sm">Total Revenue</p>
+                <p className="text-2xl font-bold">Rs. {overview.revenue.total.toLocaleString()}</p>
+                <p className="text-emerald-200 text-xs mt-1">+{overview.revenue.growth}% growth</p>
+              </div>
+              <div className="bg-emerald-400 bg-opacity-30 p-3 rounded-full">
+                <TrendingUp className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <ArrowDown className="h-8 w-8 text-red-500" />
+        {/* Profit */}
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-600">Rs. {overview.expenses.total.toLocaleString()}</p>
-                <p className="text-xs text-red-500">+{overview.expenses.growth}% growth</p>
+                <p className="text-blue-100 text-sm">Net Profit</p>
+                <p className="text-2xl font-bold">Rs. {overview.profit.net.toLocaleString()}</p>
+                <p className="text-blue-200 text-xs mt-1">{overview.profit.margin}% margin</p>
+              </div>
+              <div className="bg-blue-400 bg-opacity-30 p-3 rounded-full">
+                <Target className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-blue-500" />
+        {/* Cash Flow */}
+        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Net Profit</p>
-                <p className="text-2xl font-bold text-blue-600">Rs. {overview.profit.net.toLocaleString()}</p>
-                <p className="text-xs text-blue-500">{overview.profit.margin}% margin</p>
+                <p className="text-purple-100 text-sm">Cash Flow</p>
+                <p className="text-2xl font-bold">Rs. {overview.cashFlow.net.toLocaleString()}</p>
+                <p className="text-purple-200 text-xs mt-1">Net flow</p>
+              </div>
+              <div className="bg-purple-400 bg-opacity-30 p-3 rounded-full">
+                <Wallet className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <DollarSign className="h-8 w-8 text-purple-500" />
+        {/* Expenses */}
+        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Cash Flow</p>
-                <p className="text-2xl font-bold text-purple-600">Rs. {overview.cashFlow.net.toLocaleString()}</p>
-                <p className="text-xs text-purple-500">Net flow</p>
+                <p className="text-orange-100 text-sm">Total Expenses</p>
+                <p className="text-2xl font-bold">Rs. {overview.expenses.total.toLocaleString()}</p>
+                <p className="text-orange-200 text-xs mt-1">+{overview.expenses.growth}% growth</p>
+              </div>
+              <div className="bg-orange-400 bg-opacity-30 p-3 rounded-full">
+                <TrendingDown className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -192,161 +320,196 @@ const Finance = () => {
       </div>
 
       {/* Revenue Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-green-500" />
-              Revenue Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded">
-                <span className="font-medium">Cash Sales</span>
-                <span className="font-bold text-green-600">Rs. {overview.revenue.cash.toLocaleString()}</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Cash Revenue */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-green-100 dark:bg-green-900 p-2 rounded-lg">
+                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
-                <span className="font-medium">Credit Sales</span>
-                <span className="font-bold text-blue-600">Rs. {overview.revenue.credit.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-100 rounded border-t-2">
-                <span className="font-bold">Total Revenue</span>
-                <span className="font-bold text-gray-900">Rs. {overview.revenue.total.toLocaleString()}</span>
+              <div>
+                <p className="text-sm text-muted-foreground">Cash Revenue</p>
+                <p className="text-xl font-bold text-green-700 dark:text-green-400">Rs. {overview.revenue.cash.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowDown className="h-5 w-5 text-red-500" />
-              Expense Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-red-50 rounded">
-                <span className="font-medium">Purchases</span>
-                <span className="font-bold text-red-600">Rs. {overview.expenses.purchases.toLocaleString()}</span>
+        {/* Credit Revenue */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-indigo-100 dark:bg-indigo-900 p-2 rounded-lg">
+                <CreditCard className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
-                <span className="font-medium">Operational</span>
-                <span className="font-bold text-orange-600">Rs. {overview.expenses.operational.toLocaleString()}</span>
+              <div>
+                <p className="text-sm text-muted-foreground">Credit Revenue</p>
+                <p className="text-xl font-bold text-indigo-700 dark:text-indigo-400">Rs. {overview.revenue.credit.toLocaleString()}</p>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-100 rounded border-t-2">
-                <span className="font-bold">Total Expenses</span>
-                <span className="font-bold text-gray-900">Rs. {overview.expenses.total.toLocaleString()}</span>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Outstanding */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
+                <Building2 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Outstanding</p>
+                <p className="text-xl font-bold text-foreground">Rs. {overview.accountsReceivable.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="receivables" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="receivables">Accounts Receivable</TabsTrigger>
-          <TabsTrigger value="expenses">Recent Expenses</TabsTrigger>
-          <TabsTrigger value="cashflow">Cash Flow</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="receivables">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-500" />
-                Accounts Receivable
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {receivables.map((receivable) => (
-                  <div key={receivable.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{receivable.customerName}</p>
-                      <p className="text-sm text-gray-500">
-                        Invoice: {receivable.invoiceNumber} • Due: {receivable.dueDate}
-                      </p>
-                      {receivable.daysOverdue > 0 && (
-                        <Badge variant="destructive" className="mt-1">
-                          {receivable.daysOverdue} days overdue
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-blue-600">Rs. {receivable.balance.toLocaleString()}</p>
-                      <p className="text-sm text-gray-500">
-                        Paid: Rs. {receivable.paidAmount.toLocaleString()}
-                      </p>
-                    </div>
+      {/* Detailed Sections */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Accounts Receivable */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-5 w-5 text-blue-600" />
+              Accounts Receivable
+              <Badge className="ml-auto bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                Rs. {overview.accountsReceivable.toLocaleString()}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-80 overflow-y-auto">
+              {receivables.map((rec) => (
+                <div key={rec.id} className="flex items-center justify-between p-4 border-b border-border last:border-0 hover:bg-accent transition-colors">
+                  <div className="flex-1">
+                    <div className="font-medium text-foreground">{rec.customerName}</div>
+                    <div className="text-sm text-muted-foreground">Invoice {rec.invoiceNumber}</div>
+                    <div className="text-xs text-muted-foreground">Due: {rec.dueDate}</div>
+                    {rec.daysOverdue > 0 && (
+                      <Badge variant="destructive" className="mt-1 text-xs">
+                        {rec.daysOverdue} days overdue
+                      </Badge>
+                    )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <div className="text-right">
+                    <div className="font-semibold text-blue-700 dark:text-blue-400">Rs. {rec.balance.toLocaleString()}</div>
+                    <div className="text-xs text-muted-foreground">Paid: Rs. {rec.paidAmount.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Accounts Payable */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5 text-orange-600" />
+              Accounts Payable
+              <Badge className="ml-auto bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300">
+                Rs. {overview.accountsPayable.toLocaleString()}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-80 overflow-y-auto">
+              {payables.map((pay) => (
+                <div key={pay.id} className="flex items-center justify-between p-4 border-b border-border last:border-0 hover:bg-accent transition-colors">
+                  <div className="flex-1">
+                    <div className="font-medium text-foreground">{pay.supplierName}</div>
+                    {pay.contactPerson && <div className="text-sm text-muted-foreground">Contact: {pay.contactPerson}</div>}
+                    {pay.pendingOrders > 0 && (
+                      <div className="text-xs text-muted-foreground">{pay.pendingOrders} pending orders</div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-orange-700 dark:text-orange-400">Rs. {pay.amount.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <TabsContent value="expenses">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ArrowDown className="h-5 w-5 text-red-500" />
-                Recent Expenses
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {expenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{expense.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">{expense.category}</Badge>
-                        <span className="text-sm text-gray-500">•</span>
-                        <span className="text-sm text-gray-500">{expense.date}</span>
-                        <span className="text-sm text-gray-500">•</span>
-                        <span className="text-sm text-gray-500 capitalize">{expense.paymentMethod.replace('_', ' ')}</span>
+      {/* Bottom Section */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Recent Expenses */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Receipt className="h-5 w-5 text-red-600" />
+              Recent Expenses
+              <Badge className="ml-auto bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
+                Rs. {overview.expenses.total.toLocaleString()}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-80 overflow-y-auto">
+              {expenses.map((exp) => (
+                <div key={exp.id} className="p-4 border-b border-border last:border-0 hover:bg-accent transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">{exp.description}</div>
+                      <div className="text-sm text-muted-foreground">{exp.category}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {exp.date} • {exp.paymentMethod.replace("_", " ")}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-red-600">Rs. {expense.amount.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">{expense.reference}</p>
+                    <div className="font-semibold text-red-700 dark:text-red-400">Rs. {exp.amount.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Cash Flow */}
+        <Card className="bg-card shadow-lg border-0">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Package className="h-5 w-5 text-cyan-600" />
+              Cash Flow
+              <Badge className="ml-auto bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300">
+                Rs. {overview.cashFlow.net.toLocaleString()}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-80 overflow-y-auto">
+              {cashFlow.map((cf, idx) => (
+                <div key={idx} className="p-4 border-b border-border last:border-0 hover:bg-accent transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      {cf.type === "inflow" ? (
+                        <div className="bg-green-100 dark:bg-green-900 p-1.5 rounded-full">
+                          <ArrowUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                      ) : (
+                        <div className="bg-red-100 dark:bg-red-900 p-1.5 rounded-full">
+                          <ArrowDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium text-foreground">{cf.description}</div>
+                        <div className="text-xs text-muted-foreground">{cf.date}</div>
+                      </div>
+                    </div>
+                    <div className={`font-semibold ${cf.type === "inflow" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                      Rs. {cf.amount.toLocaleString()}
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="cashflow">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="text-center p-6">
-              <ArrowUp className="h-12 w-12 text-green-500 mx-auto mb-3" />
-              <p className="text-2xl font-bold text-green-600">Rs. {overview.cashFlow.inflow.toLocaleString()}</p>
-              <p className="text-sm text-gray-600">Cash Inflow</p>
-            </Card>
-            <Card className="text-center p-6">
-              <ArrowDown className="h-12 w-12 text-red-500 mx-auto mb-3" />
-              <p className="text-2xl font-bold text-red-600">Rs. {overview.cashFlow.outflow.toLocaleString()}</p>
-              <p className="text-sm text-gray-600">Cash Outflow</p>
-            </Card>
-            <Card className="text-center p-6">
-              <TrendingUp className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-              <p className={`text-2xl font-bold ${overview.cashFlow.net >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                Rs. {overview.cashFlow.net.toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-600">Net Cash Flow</p>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
 
-// Payment Dialog Component
 const PaymentDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; onClose: () => void }) => {
   const [formData, setFormData] = useState({
     customerId: "",
@@ -356,49 +519,57 @@ const PaymentDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; o
     notes: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      ...formData,
-      customerId: parseInt(formData.customerId),
-      amount: parseFloat(formData.amount)
-    });
-  };
-
   return (
-    <DialogContent className="max-w-xl">
+    <DialogContent className="max-w-xl bg-card">
       <DialogHeader>
-        <DialogTitle className="text-green-600">Record Payment</DialogTitle>
+        <DialogTitle className="text-emerald-600 flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          Record Payment
+        </DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={e => {
+          e.preventDefault();
+          onSubmit({
+            ...formData,
+            customerId: Number(formData.customerId),
+            amount: Number(formData.amount)
+          });
+        }}
+        className="space-y-4"
+      >
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="customerId">Customer ID</Label>
+            <Label htmlFor="customerId" className="text-sm font-medium">Customer ID</Label>
             <Input
               id="customerId"
               type="number"
               value={formData.customerId}
-              onChange={(e) => setFormData({...formData, customerId: e.target.value})}
+              onChange={e => setFormData({ ...formData, customerId: e.target.value })}
               required
+              className="mt-1"
             />
           </div>
           <div>
-            <Label htmlFor="amount">Amount (Rs.)</Label>
+            <Label htmlFor="amount" className="text-sm font-medium">Amount (Rs.)</Label>
             <Input
               id="amount"
               type="number"
               step="0.01"
               value={formData.amount}
-              onChange={(e) => setFormData({...formData, amount: e.target.value})}
+              onChange={e => setFormData({ ...formData, amount: e.target.value })}
               required
+              className="mt-1"
             />
           </div>
         </div>
-
         <div>
-          <Label htmlFor="paymentMethod">Payment Method</Label>
-          <Select value={formData.paymentMethod} onValueChange={(value) => setFormData({...formData, paymentMethod: value})}>
-            <SelectTrigger>
+          <Label htmlFor="paymentMethod" className="text-sm font-medium">Payment Method</Label>
+          <Select
+            value={formData.paymentMethod}
+            onValueChange={value => setFormData({ ...formData, paymentMethod: value })}
+          >
+            <SelectTrigger className="mt-1">
               <SelectValue placeholder="Select payment method" />
             </SelectTrigger>
             <SelectContent>
@@ -408,33 +579,32 @@ const PaymentDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; o
             </SelectContent>
           </Select>
         </div>
-
         <div>
-          <Label htmlFor="reference">Reference</Label>
+          <Label htmlFor="reference" className="text-sm font-medium">Reference</Label>
           <Input
             id="reference"
             value={formData.reference}
-            onChange={(e) => setFormData({...formData, reference: e.target.value})}
-            required
+            onChange={e => setFormData({ ...formData, reference: e.target.value })}
+            placeholder="Leave blank to auto generate"
+            className="mt-1"
           />
         </div>
-
         <div>
-          <Label htmlFor="notes">Notes</Label>
+          <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
           <Textarea
             id="notes"
             value={formData.notes}
-            onChange={(e) => setFormData({...formData, notes: e.target.value})}
+            onChange={e => setFormData({ ...formData, notes: e.target.value })}
             placeholder="Optional notes about the payment"
             rows={2}
+            className="mt-1"
           />
         </div>
-
-        <div className="flex gap-2 pt-4">
-          <Button 
-            type="submit" 
-            className="flex-1 bg-green-600 hover:bg-green-700"
-            disabled={!formData.customerId || !formData.amount || !formData.paymentMethod || !formData.reference}
+        <div className="flex gap-3 pt-4">
+          <Button
+            type="submit"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+            disabled={!formData.customerId || !formData.amount || !formData.paymentMethod}
           >
             Record Payment
           </Button>

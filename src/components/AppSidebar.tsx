@@ -1,4 +1,3 @@
-
 import {
   Sidebar,
   SidebarContent,
@@ -31,9 +30,9 @@ import {
   CreditCard,
   UserCheck,
   Database,
-  Receipt,
   PieChart,
-  ShoppingBag
+  ShoppingBag,
+  MessageCircle
 } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -82,7 +81,7 @@ const mainItems: MenuItem[] = [
   },
 ]
 
-// Business Operations
+// Business Operations - removed Sales Receipts
 const businessItems: MenuItem[] = [
   {
     title: "Suppliers",
@@ -93,11 +92,6 @@ const businessItems: MenuItem[] = [
     title: "Purchase Orders",
     url: "/purchase-orders",
     icon: FileText,
-  },
-  {
-    title: "Sales Receipts",
-    url: "/sales-receipts", 
-    icon: Receipt,
   },
   {
     title: "Quotations",
@@ -128,15 +122,9 @@ const financeItems: MenuItem[] = [
 // Analytics & Reports
 const analyticsItems: MenuItem[] = [
   {
-    title: "Reports",
+    title: "Ask AI",
     url: "/reports",
-    icon: BarChart3,
-  },
-  {
-    title: "Sales Analytics",
-    url: "/sales-analytics",
-    icon: PieChart,
-    badge: "Pro"
+    icon: MessageCircle,
   },
   {
     title: "Customer Insights",

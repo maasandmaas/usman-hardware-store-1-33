@@ -10,19 +10,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Users, Search, Plus, Edit, CreditCard, Phone, MapPin, Calendar, Mail, Building, IdCard, Receipt, History, AlertCircle, Banknote } from "lucide-react";
+import { Users, Search, Plus, Edit, CreditCard, Phone, MapPin, Calendar, Mail, Building, IdCard, Receipt, History, AlertCircle, Banknote, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { customersApi } from "@/services/api";
 import { CustomerEditModal } from "@/components/customers/CustomerEditModal";
+import { useCustomerBalance } from "@/hooks/useCustomerBalance";
 
 const Customers = () => {
   const { toast } = useToast();
+  const { syncAllCustomerBalances } = useCustomerBalance();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerTypeFilter, setCustomerTypeFilter] = useState("all");
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -30,7 +33,7 @@ const Customers = () => {
     itemsPerPage: 20
   });
 
-  // NEW: States for customer edit modal
+  // States for customer edit modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
 
@@ -50,27 +53,38 @@ const Customers = () => {
       const params: any = {
         page,
         limit: 20,
-        status: 'active'
+        status: 'active',
+        includeHistoricalData: true,
+        allTime: true
       };
       
       if (searchTerm) params.search = searchTerm;
       if (customerTypeFilter !== 'all') params.type = customerTypeFilter;
 
+      console.log('Fetching customers with params:', params);
       const response = await customersApi.getAll(params);
+      console.log('API Response:', response);
       
       if (response.success) {
-        const customerData = response.data?.customers || response.data || [];
-        console.log('Customers response:', response.data);
+        // Use the data structure directly from the API
+        const apiData = response.data;
+        const customersArray = apiData?.customers || [];
         
-        // Ensure we're working with an array
-        const customersArray = Array.isArray(customerData) ? customerData : [];
+        console.log('Customers from API:', customersArray);
+        
+        // Log specific customers to debug the totalPurchases issue
+        customersArray.forEach(customer => {
+          if (customer.lastPurchase && (customer.totalPurchases === 0 || customer.totalPurchases === null)) {
+            console.warn(`Customer ${customer.name} has lastPurchase: ${customer.lastPurchase} but totalPurchases: ${customer.totalPurchases}`);
+          }
+        });
+        
         setCustomers(customersArray);
         
-        // Update pagination if available
-        if (response.data?.pagination) {
-          setPagination(response.data.pagination);
+        // Use pagination info from API
+        if (apiData?.pagination) {
+          setPagination(apiData.pagination);
         } else {
-          // Set basic pagination info if not provided
           setPagination({
             currentPage: 1,
             totalPages: 1,
@@ -78,6 +92,14 @@ const Customers = () => {
             itemsPerPage: 20
           });
         }
+      } else {
+        console.error('API returned error:', response);
+        setCustomers([]);
+        toast({
+          title: "Error",
+          description: response.message || "Failed to load customers",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Failed to fetch customers:', error);
@@ -92,15 +114,37 @@ const Customers = () => {
     }
   };
 
+  // Handle manual balance sync
+  const handleSyncBalances = async () => {
+    try {
+      setSyncing(true);
+      await syncAllCustomerBalances();
+      await fetchCustomers(); // Refresh the data
+    } catch (error) {
+      console.error('Failed to sync balances:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleAddCustomer = async (formData: any) => {
     try {
+      console.log('Creating customer with data:', formData);
       const response = await customersApi.create(formData);
+      console.log('Create customer response:', response);
+      
       if (response.success) {
         setIsDialogOpen(false);
         fetchCustomers();
         toast({
           title: "Customer Added",
           description: "New customer has been added successfully.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to add customer",
+          variant: "destructive"
         });
       }
     } catch (error) {
@@ -122,6 +166,12 @@ const Customers = () => {
           title: "Customer Updated",
           description: "Customer has been updated successfully.",
         });
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to update customer",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Failed to update customer:', error);
@@ -133,20 +183,20 @@ const Customers = () => {
     }
   };
 
-  // NEW: Handle edit customer
+  // Handle edit customer
   const handleEditCustomer = (customer: any) => {
     setCustomerToEdit(customer);
     setIsEditModalOpen(true);
   };
 
-  // NEW: Handle customer updated
+  // Handle customer updated
   const handleCustomerUpdated = () => {
     fetchCustomers();
     setIsEditModalOpen(false);
     setCustomerToEdit(null);
   };
 
-  // NEW: Handle customer deleted
+  // Handle customer deleted
   const handleCustomerDeleted = () => {
     fetchCustomers();
     setIsEditModalOpen(false);
@@ -163,9 +213,10 @@ const Customers = () => {
     return matchesSearch && matchesType;
   });
 
-  const totalDues = customers.reduce((sum, customer) => sum + (customer.currentBalance || customer.dueAmount || 0), 0);
+  // Use the currentBalance from API data
+  const totalDues = customers.reduce((sum, customer) => sum + (customer.currentBalance || 0), 0);
   const activeCustomers = customers.filter(c => c.status === "active" || !c.status).length;
-  const customersWithDues = customers.filter(c => (c.currentBalance || c.dueAmount || 0) > 0).length;
+  const customersWithDues = customers.filter(c => (c.currentBalance || 0) > 0).length;
 
   const getCustomerTypeColor = (type: string) => {
     const colors = {
@@ -181,7 +232,7 @@ const Customers = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
+      <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-muted-foreground">Loading customers...</div>
         </div>
@@ -190,8 +241,9 @@ const Customers = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
+      {/* HEADER + ACTIONS: now stacked properly */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
@@ -199,15 +251,26 @@ const Customers = () => {
             <p className="text-muted-foreground">Manage customer profiles, dues, and transactions</p>
           </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
-            </Button>
-          </DialogTrigger>
-          <CustomerDialog onSubmit={handleAddCustomer} onClose={() => setIsDialogOpen(false)} />
-        </Dialog>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <Button 
+            variant="outline" 
+            onClick={handleSyncBalances}
+            disabled={syncing}
+            className="bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200 w-full sm:w-auto"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync Balances'}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
+            </DialogTrigger>
+            <CustomerDialog onSubmit={handleAddCustomer} onClose={() => setIsDialogOpen(false)} />
+          </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -309,8 +372,8 @@ const Customers = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <CardTitle className="text-lg text-foreground">{customer.name}</CardTitle>
-                      <Badge className={`text-xs ${getCustomerTypeColor(customer.type || 'individual')}`}>
-                        {customer.type || 'individual'}
+                      <Badge className={`text-xs ${getCustomerTypeColor(customer.type || 'business')}`}>
+                        {customer.type || 'business'}
                       </Badge>
                       <Badge className={`text-xs ${getStatusColor(customer.status)}`}>
                         {customer.status || 'active'}
@@ -318,12 +381,12 @@ const Customers = () => {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <Phone className="h-4 w-4" />
-                      {customer.phone}
+                      {customer.phone || 'No phone'}
                     </div>
                   </div>
-                  {(customer.currentBalance || customer.dueAmount || 0) > 0 && (
+                  {(customer.currentBalance || 0) > 0 && (
                     <Badge variant="destructive" className="ml-2">
-                      Due: PKR {(customer.currentBalance || customer.dueAmount)?.toLocaleString()}
+                      Due: PKR {customer.currentBalance?.toLocaleString()}
                     </Badge>
                   )}
                 </div>
@@ -415,7 +478,7 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
     email: "", 
     address: "", 
     city: "",
-    type: "individual",
+    type: "business",
     creditLimit: ""
   });
 
@@ -426,7 +489,7 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
       creditLimit: parseFloat(formData.creditLimit) || 0
     });
     setFormData({ 
-      name: "", phone: "", email: "", address: "", city: "", type: "individual", creditLimit: "" 
+      name: "", phone: "", email: "", address: "", city: "", type: "business", creditLimit: "" 
     });
   };
 
@@ -452,7 +515,6 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
               id="phone"
               value={formData.phone}
               onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              required
             />
           </div>
         </div>
@@ -546,11 +608,11 @@ const CustomerDetailsDialog = ({
                 <div>
                   <Label>Contact Information</Label>
                   <div className="mt-2 space-y-2 text-sm">
-                    <p><strong>Phone:</strong> {customer.phone}</p>
+                    <p><strong>Phone:</strong> {customer.phone || 'N/A'}</p>
                     <p><strong>Email:</strong> {customer.email || 'N/A'}</p>
-                    <p><strong>Address:</strong> {customer.address}</p>
-                    <p><strong>City:</strong> {customer.city}</p>
-                    <p><strong>Type:</strong> {customer.type}</p>
+                    <p><strong>Address:</strong> {customer.address || 'N/A'}</p>
+                    <p><strong>City:</strong> {customer.city || 'N/A'}</p>
+                    <p><strong>Type:</strong> {customer.type || 'business'}</p>
                   </div>
                 </div>
               </div>
@@ -560,8 +622,8 @@ const CustomerDetailsDialog = ({
                   <div className="mt-2 space-y-2 text-sm">
                     <p><strong>Total Purchases:</strong> PKR {customer.totalPurchases?.toLocaleString() || '0'}</p>
                     <p><strong>Credit Limit:</strong> PKR {customer.creditLimit?.toLocaleString() || '0'}</p>
-                    <p><strong>Outstanding Amount:</strong> <span className="text-red-600 font-bold">PKR {(customer.currentBalance || customer.dueAmount || 0)?.toLocaleString()}</span></p>
-                    <p><strong>Available Credit:</strong> PKR {((customer.creditLimit || 0) - (customer.currentBalance || customer.dueAmount || 0)).toLocaleString()}</p>
+                    <p><strong>Outstanding Amount:</strong> <span className="text-red-600 font-bold">PKR {(customer.currentBalance || 0)?.toLocaleString()}</span></p>
+                    <p><strong>Available Credit:</strong> PKR {((customer.creditLimit || 0) - (customer.currentBalance || 0)).toLocaleString()}</p>
                     <p><strong>Last Purchase:</strong> {customer.lastPurchase || 'N/A'}</p>
                   </div>
                 </div>

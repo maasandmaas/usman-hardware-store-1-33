@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,127 +10,121 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Search, Plus, Edit, Trash2, Phone, Mail, MapPin, Package, DollarSign, TrendingUp, Building2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, Plus, Edit, Trash2, Phone, Mail, MapPin, Package, DollarSign, TrendingUp, Building2, User, Calendar, FileText, Loader2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { suppliersApi } from "@/services/api";
 
 const Suppliers = () => {
   const { toast } = useToast();
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 20
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch suppliers
+  const { data: suppliersData, isLoading } = useQuery({
+    queryKey: ['suppliers', currentPage, searchTerm, statusFilter],
+    queryFn: () => suppliersApi.getAll({
+      page: currentPage,
+      limit: 20,
+      search: searchTerm || undefined,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+    }),
   });
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, [searchTerm, statusFilter, pagination.currentPage]);
-
-  const fetchSuppliers = async (page = pagination.currentPage) => {
-    try {
-      setLoading(true);
-      const params: any = {
-        page,
-        limit: 20
-      };
-      
-      if (searchTerm) params.search = searchTerm;
-      if (statusFilter !== 'all') params.status = statusFilter;
-
-      const response = await suppliersApi.getAll(params);
-      
-      if (response.success) {
-        const supplierData = response.data?.suppliers || response.data || [];
-        console.log('Suppliers response:', response.data);
-        
-        setSuppliers(Array.isArray(supplierData) ? supplierData : []);
-        
-        if (response.data?.pagination) {
-          setPagination(response.data.pagination);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch suppliers:', error);
-      setSuppliers([]);
+  // Create supplier mutation
+  const createSupplierMutation = useMutation({
+    mutationFn: suppliersApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      setIsAddDialogOpen(false);
+      toast({
+        title: "Supplier Added",
+        description: "New supplier has been added successfully",
+      });
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to load suppliers",
-        variant: "destructive"
+        description: error.message || "Failed to add supplier",
+        variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
-  const handleAddSupplier = async (formData: any) => {
-    try {
-      const response = await suppliersApi.create(formData);
-      if (response.success) {
-        setIsAddDialogOpen(false);
-        fetchSuppliers(1);
-        toast({ 
-          title: "Supplier Added", 
-          description: "New supplier has been added successfully" 
+  // Update supplier mutation
+  const updateSupplierMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => suppliersApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      setEditingSupplier(null);
+      toast({
+        title: "Supplier Updated",
+        description: "Supplier information has been updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update supplier",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete supplier mutation with improved error handling
+  const deleteSupplierMutation = useMutation({
+    mutationFn: suppliersApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast({
+        title: "Supplier Deleted",
+        description: "Supplier has been removed from the system",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Delete error:', error);
+      
+      // Handle 409 conflict error specifically
+      if (error.message && error.message.includes('409')) {
+        toast({
+          title: "Cannot Delete Supplier",
+          description: "This supplier cannot be deleted because it has associated products or purchase orders. Please remove or reassign them first.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete supplier",
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error('Failed to add supplier:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add supplier",
-        variant: "destructive"
-      });
-    }
+    },
+  });
+
+  const suppliers = suppliersData?.data?.suppliers || [];
+  const pagination = suppliersData?.data?.pagination;
+
+  const handleAddSupplier = (formData: any) => {
+    createSupplierMutation.mutate(formData);
   };
 
-  const handleEditSupplier = async (formData: any) => {
-    try {
-      if (!editingSupplier?.id) return;
-      
-      const response = await suppliersApi.update(editingSupplier.id, formData);
-      if (response.success) {
-        setEditingSupplier(null);
-        fetchSuppliers();
-        toast({ 
-          title: "Supplier Updated", 
-          description: "Supplier information has been updated" 
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update supplier:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update supplier",
-        variant: "destructive"
-      });
-    }
+  const handleEditSupplier = (formData: any) => {
+    if (!editingSupplier?.id) return;
+    updateSupplierMutation.mutate({ id: editingSupplier.id, data: formData });
   };
 
   const handleDeleteSupplier = async (id: number) => {
+    console.log('Attempting to delete supplier:', id);
     try {
-      const response = await suppliersApi.delete(id);
-      if (response.success) {
-        fetchSuppliers();
-        toast({ 
-          title: "Supplier Deleted", 
-          description: "Supplier has been removed from the system" 
-        });
-      }
+      await deleteSupplierMutation.mutateAsync(id);
     } catch (error) {
-      console.error('Failed to delete supplier:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete supplier",
-        variant: "destructive"
-      });
+      console.error('Delete failed:', error);
     }
   };
 
@@ -148,14 +141,14 @@ const Suppliers = () => {
   };
 
   const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, currentPage: page }));
+    setCurrentPage(page);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex-1 p-6 space-y-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-muted-foreground">Loading suppliers...</div>
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </div>
     );
@@ -182,7 +175,11 @@ const Suppliers = () => {
             <DialogHeader>
               <DialogTitle>Add New Supplier</DialogTitle>
             </DialogHeader>
-            <SupplierForm onSubmit={handleAddSupplier} onClose={() => setIsAddDialogOpen(false)} />
+            <SupplierForm 
+              onSubmit={handleAddSupplier} 
+              onClose={() => setIsAddDialogOpen(false)}
+              isLoading={createSupplierMutation.isPending}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -195,7 +192,7 @@ const Suppliers = () => {
               <Building2 className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-gray-500">Total Suppliers</p>
-                <p className="text-2xl font-bold text-blue-600">{pagination.totalItems}</p>
+                <p className="text-2xl font-bold text-blue-600">{pagination?.totalItems || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -208,7 +205,7 @@ const Suppliers = () => {
               <div>
                 <p className="text-sm text-gray-500">Active Suppliers</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {suppliers.filter(s => s.status === "active").length}
+                  {suppliers.filter((s: any) => s.status === "active").length}
                 </p>
               </div>
             </div>
@@ -222,7 +219,7 @@ const Suppliers = () => {
               <div>
                 <p className="text-sm text-gray-500">Total Purchases</p>
                 <p className="text-2xl font-bold text-orange-600">
-                  Rs. {suppliers.reduce((sum, s) => sum + (s.totalPurchases || 0), 0).toLocaleString()}
+                  Rs. {suppliers.reduce((sum: number, s: any) => sum + (s.totalPurchases || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -236,7 +233,7 @@ const Suppliers = () => {
               <div>
                 <p className="text-sm text-gray-500">Pending Payments</p>
                 <p className="text-2xl font-bold text-red-600">
-                  Rs. {suppliers.reduce((sum, s) => sum + (s.pendingPayments || 0), 0).toLocaleString()}
+                  Rs. {suppliers.reduce((sum: number, s: any) => sum + (s.pendingPayments || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -295,7 +292,7 @@ const Suppliers = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                suppliers.map((supplier) => (
+                suppliers.map((supplier: any) => (
                   <TableRow key={supplier.id}>
                     <TableCell>
                       <div>
@@ -323,7 +320,7 @@ const Suppliers = () => {
                           <p className="text-sm text-red-600">Due: Rs. {supplier.pendingPayments.toLocaleString()}</p>
                         )}
                         <p className="text-xs text-gray-500">
-                          Last Order: {supplier.lastOrderDate || 'N/A'}
+                          Last Order: {supplier.lastOrderDate ? new Date(supplier.lastOrderDate).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
                     </TableCell>
@@ -339,6 +336,7 @@ const Suppliers = () => {
                           variant="outline"
                           onClick={() => handleViewSupplier(supplier)}
                         >
+                          <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
                         <Button
@@ -346,16 +344,57 @@ const Suppliers = () => {
                           variant="outline"
                           onClick={() => setEditingSupplier(supplier)}
                         >
-                          <Edit className="h-3 w-3" />
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600"
-                          onClick={() => handleDeleteSupplier(supplier.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600"
+                              disabled={deleteSupplierMutation.isPending}
+                            >
+                              {deleteSupplierMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3 mr-1" />
+                              )}
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Supplier</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this supplier? This action cannot be undone.
+                                {supplier.productsCount > 0 && (
+                                  <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                    <strong>Warning:</strong> This supplier has {supplier.productsCount} associated products. 
+                                    Deletion may fail if there are active relationships.
+                                  </div>
+                                )}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteSupplier(supplier.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={deleteSupplierMutation.isPending}
+                              >
+                                {deleteSupplierMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  "Delete"
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -365,14 +404,14 @@ const Suppliers = () => {
           </Table>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
+          {pagination && pagination.totalPages > 1 && (
             <div className="mt-4">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious 
-                      onClick={() => handlePageChange(Math.max(1, pagination.currentPage - 1))}
-                      className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
                   
@@ -380,7 +419,7 @@ const Suppliers = () => {
                     <PaginationItem key={page}>
                       <PaginationLink
                         onClick={() => handlePageChange(page)}
-                        isActive={page === pagination.currentPage}
+                        isActive={page === currentPage}
                         className="cursor-pointer"
                       >
                         {page}
@@ -390,8 +429,8 @@ const Suppliers = () => {
                   
                   <PaginationItem>
                     <PaginationNext 
-                      onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}
-                      className={pagination.currentPage === pagination.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      onClick={() => handlePageChange(Math.min(pagination.totalPages, currentPage + 1))}
+                      className={currentPage === pagination.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -411,15 +450,19 @@ const Suppliers = () => {
             supplier={editingSupplier}
             onSubmit={handleEditSupplier}
             onClose={() => setEditingSupplier(null)}
+            isLoading={updateSupplierMutation.isPending}
           />
         </DialogContent>
       </Dialog>
 
       {/* View Supplier Dialog */}
       <Dialog open={!!selectedSupplier} onOpenChange={() => setSelectedSupplier(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Supplier Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Supplier Details
+            </DialogTitle>
           </DialogHeader>
           {selectedSupplier && <SupplierDetails supplier={selectedSupplier} />}
         </DialogContent>
@@ -429,7 +472,7 @@ const Suppliers = () => {
 };
 
 // Supplier Form Component
-const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
+const SupplierForm = ({ supplier, onSubmit, onClose, isLoading }: any) => {
   const [formData, setFormData] = useState({
     name: supplier?.name || "",
     contactPerson: supplier?.contactPerson || "",
@@ -443,14 +486,13 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    onClose();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="name">Supplier Name</Label>
+          <Label htmlFor="name">Supplier Name *</Label>
           <Input
             id="name"
             value={formData.name}
@@ -464,7 +506,6 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
             id="contactPerson"
             value={formData.contactPerson}
             onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
-            required
           />
         </div>
       </div>
@@ -476,7 +517,6 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
             id="phone"
             value={formData.phone}
             onChange={(e) => setFormData({...formData, phone: e.target.value})}
-            required
           />
         </div>
         <div>
@@ -486,7 +526,6 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({...formData, email: e.target.value})}
-            required
           />
         </div>
       </div>
@@ -497,7 +536,7 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
           id="address"
           value={formData.address}
           onChange={(e) => setFormData({...formData, address: e.target.value})}
-          required
+          rows={3}
         />
       </div>
 
@@ -508,7 +547,6 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
             id="city"
             value={formData.city}
             onChange={(e) => setFormData({...formData, city: e.target.value})}
-            required
           />
         </div>
         <div>
@@ -526,8 +564,17 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
       </div>
 
       <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          {supplier ? "Update" : "Add"} Supplier
+        <Button type="submit" className="flex-1" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {supplier ? "Updating..." : "Adding..."}
+            </>
+          ) : (
+            <>
+              {supplier ? "Update" : "Add"} Supplier
+            </>
+          )}
         </Button>
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
@@ -537,72 +584,155 @@ const SupplierForm = ({ supplier, onSubmit, onClose }: any) => {
   );
 };
 
-// Supplier Details Component
+// Enhanced Supplier Details Component
 const SupplierDetails = ({ supplier }: { supplier: any }) => (
   <div className="space-y-6">
-    <div className="grid grid-cols-2 gap-6">
-      <div>
-        <h3 className="font-semibold mb-3">Contact Information</h3>
-        <div className="space-y-2">
-          <p><strong>Company:</strong> {supplier.name}</p>
-          <p><strong>Contact Person:</strong> {supplier.contactPerson}</p>
-          <p><strong>Phone:</strong> {supplier.phone}</p>
-          <p><strong>Email:</strong> {supplier.email}</p>
-          <p><strong>Address:</strong> {supplier.address}</p>
-          <p><strong>City:</strong> {supplier.city}</p>
+    {/* Header Section */}
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{supplier.name}</h2>
+          <p className="text-gray-600">{supplier.contactPerson}</p>
         </div>
-      </div>
-      
-      <div>
-        <h3 className="font-semibold mb-3">Financial Summary</h3>
-        <div className="space-y-2">
-          <p><strong>Total Purchases:</strong> Rs. {(supplier.totalPurchases || 0).toLocaleString()}</p>
-          <p><strong>Pending Payments:</strong> Rs. {(supplier.pendingPayments || 0).toLocaleString()}</p>
-          <p><strong>Last Order:</strong> {supplier.lastOrderDate || 'N/A'}</p>
-          <p><strong>Products Count:</strong> {supplier.productsCount || 0}</p>
-          <p><strong>Status:</strong> 
-            <Badge className="ml-2" variant={supplier.status === "active" ? "default" : "secondary"}>
-              {supplier.status}
-            </Badge>
-          </p>
-        </div>
+        <Badge 
+          variant={supplier.status === "active" ? "default" : "secondary"}
+          className="text-sm px-3 py-1"
+        >
+          {supplier.status.charAt(0).toUpperCase() + supplier.status.slice(1)}
+        </Badge>
       </div>
     </div>
-    
-    {supplier.products && supplier.products.length > 0 && (
-      <div>
-        <h3 className="font-semibold mb-3">Products Supplied</h3>
-        <div className="space-y-2">
-          {supplier.products.map((product: any) => (
-            <div key={product.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-              <span>{product.name} ({product.sku})</span>
-              <span className="font-medium">Rs. {product.costPrice}</span>
+
+    {/* Contact & Financial Info */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Contact Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Phone className="h-4 w-4 text-gray-500" />
+            <span>{supplier.phone || 'Not provided'}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Mail className="h-4 w-4 text-gray-500" />
+            <span>{supplier.email || 'Not provided'}</span>
+          </div>
+          <div className="flex items-start gap-3">
+            <MapPin className="h-4 w-4 text-gray-500 mt-1" />
+            <div>
+              <div>{supplier.address || 'Not provided'}</div>
+              {supplier.city && <div className="text-sm text-gray-500">{supplier.city}</div>}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Financial Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Total Purchases:</span>
+            <span className="font-semibold">Rs. {(supplier.totalPurchases || 0).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Pending Payments:</span>
+            <span className={`font-semibold ${supplier.pendingPayments > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              Rs. {(supplier.pendingPayments || 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Products Count:</span>
+            <span className="font-semibold">{supplier.productsCount || 0}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Last Order:</span>
+            <span className="font-semibold">
+              {supplier.lastOrderDate ? new Date(supplier.lastOrderDate).toLocaleDateString() : 'N/A'}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+    
+    {/* Products Section */}
+    {supplier.products && supplier.products.length > 0 && (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Products Supplied ({supplier.products.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {supplier.products.map((product: any) => (
+              <div key={product.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <span className="font-medium">{product.name}</span>
+                  <span className="text-sm text-gray-500 ml-2">({product.sku})</span>
+                </div>
+                <span className="font-medium text-blue-600">Rs. {product.costPrice?.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     )}
     
+    {/* Recent Orders Section */}
     {supplier.recentOrders && supplier.recentOrders.length > 0 && (
-      <div>
-        <h3 className="font-semibold mb-3">Recent Orders</h3>
-        <div className="space-y-2">
-          {supplier.recentOrders.map((order: any) => (
-            <div key={order.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-              <div>
-                <span className="font-medium">{order.orderNumber}</span>
-                <span className="text-sm text-gray-500 ml-2">{order.date}</span>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Recent Orders ({supplier.recentOrders.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {supplier.recentOrders.map((order: any) => (
+              <div key={order.id} className="flex justify-between items-center p-3 border rounded-lg">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{order.orderNumber}</span>
+                    <Badge variant={order.status === "completed" ? "default" : "secondary"} className="text-xs">
+                      {order.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(order.date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold text-green-600">Rs. {order.amount?.toLocaleString()}</div>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="font-medium">Rs. {order.amount.toLocaleString()}</div>
-                <Badge variant={order.status === "completed" ? "default" : "secondary"} className="text-xs">
-                  {order.status}
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )}
+
+    {/* No Data Messages */}
+    {(!supplier.products || supplier.products.length === 0) && 
+     (!supplier.recentOrders || supplier.recentOrders.length === 0) && (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Additional Data</h3>
+          <p className="text-gray-500">No products or recent orders found for this supplier.</p>
+        </CardContent>
+      </Card>
     )}
   </div>
 );

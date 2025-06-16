@@ -37,21 +37,21 @@ const Calendar = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-700 border-red-200";
-      case "medium": return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "low": return "bg-green-100 text-green-700 border-green-200";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
+      case "high": return "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800";
+      case "medium": return "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800";
+      case "low": return "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800";
+      default: return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-slate-50">
+      <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-background">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Calendar</h1>
-            <p className="text-slate-600">Loading events...</p>
+            <h1 className="text-3xl font-bold text-foreground">Calendar</h1>
+            <p className="text-muted-foreground">Loading events...</p>
           </div>
         </div>
       </div>
@@ -59,13 +59,13 @@ const Calendar = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-slate-50">
+    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-background">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Calendar</h1>
-            <p className="text-slate-600">Manage your schedule and appointments</p>
+            <h1 className="text-3xl font-bold text-foreground">Calendar</h1>
+            <p className="text-muted-foreground">Manage your schedule and appointments</p>
           </div>
         </div>
         <Button className="bg-blue-600 hover:bg-blue-700">
@@ -77,7 +77,7 @@ const Calendar = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Schedule */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-slate-200">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5 text-blue-600" />
@@ -87,25 +87,25 @@ const Calendar = () => {
             <CardContent>
               <div className="space-y-4">
                 {events.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     No events scheduled for today
                   </div>
                 ) : (
                   events.map((event) => (
-                    <div key={event.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
+                    <div key={event.id} className="flex items-center justify-between p-4 bg-accent rounded-lg border">
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900">
                           {getEventIcon(event.type)}
                         </div>
                         <div>
-                          <h3 className="font-medium text-slate-900">{event.title}</h3>
-                          <p className="text-sm text-slate-600">{event.customerName || 'No customer assigned'}</p>
+                          <h3 className="font-medium text-foreground">{event.title}</h3>
+                          <p className="text-sm text-muted-foreground">{event.customerName || 'No customer assigned'}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <Clock className="h-3 w-3 text-slate-400" />
-                            <span className="text-xs text-slate-500">{event.time}</span>
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">{event.time}</span>
                           </div>
                           {event.description && (
-                            <p className="text-xs text-slate-500 mt-1">{event.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{event.description}</p>
                           )}
                         </div>
                       </div>
@@ -129,7 +129,7 @@ const Calendar = () => {
 
         {/* Upcoming Tasks */}
         <div className="space-y-6">
-          <Card className="border-slate-200">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-blue-600" />
@@ -139,10 +139,10 @@ const Calendar = () => {
             <CardContent>
               <div className="space-y-3">
                 {upcomingTasks.map((task, index) => (
-                  <div key={index} className="p-3 bg-slate-50 rounded border">
-                    <p className="font-medium text-sm text-slate-900">{task.task}</p>
+                  <div key={index} className="p-3 bg-accent rounded border">
+                    <p className="font-medium text-sm text-foreground">{task.task}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-slate-500">Due: {task.dueDate}</span>
+                      <span className="text-xs text-muted-foreground">Due: {task.dueDate}</span>
                       <Badge className={getPriorityColor(task.priority)}>
                         {task.priority}
                       </Badge>
@@ -154,29 +154,29 @@ const Calendar = () => {
           </Card>
 
           {/* Quick Stats */}
-          <Card className="border-slate-200">
+          <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-slate-900">This Week</CardTitle>
+              <CardTitle className="text-foreground">This Week</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Total Events</span>
+                <span className="text-sm text-muted-foreground">Total Events</span>
                 <span className="font-medium">{events.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Pending Calls</span>
+                <span className="text-sm text-muted-foreground">Pending Calls</span>
                 <span className="font-medium text-red-600">
                   {events.filter(e => e.type === 'call' && e.status === 'scheduled').length}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Deliveries</span>
+                <span className="text-sm text-muted-foreground">Deliveries</span>
                 <span className="font-medium text-blue-600">
                   {events.filter(e => e.type === 'delivery').length}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Collections</span>
+                <span className="text-sm text-muted-foreground">Collections</span>
                 <span className="font-medium text-green-600">
                   {events.filter(e => e.type === 'payment').length}
                 </span>

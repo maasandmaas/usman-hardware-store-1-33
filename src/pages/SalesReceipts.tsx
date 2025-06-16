@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -537,10 +538,14 @@ const ReceiptDetails = ({ receipt }: { receipt: SalesReceipt }) => (
               <span>Rs. {receipt.tax.toLocaleString()}</span>
             </div>
           )}
-          <div className="flex justify-between font-bold text-lg pt-2 border-t">
-            <span>Total:</span>
-            <span className="text-green-600">Rs. {receipt.total.toLocaleString()}</span>
-          </div>
+        </div>
+      </div>
+
+      {/* FIXED: Total section with proper full-width alignment */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4">
+        <div className="flex justify-between items-center">
+          <span className="text-lg font-bold">TOTAL:</span>
+          <span className="text-xl font-bold">Rs. {receipt.total.toLocaleString()}</span>
         </div>
       </div>
 
