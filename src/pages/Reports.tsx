@@ -96,7 +96,7 @@ const Reports = () => {
     {
       id: '1',
       type: 'ai',
-      content: "Assalam-o-Alaikum! I'm Nexus AI, your friendly business assistant. I can help you with business insights, analytics, and general conversation. How can I assist you today?",
+      content: "Assalam-o-Alaikum! I'm Usman Hardware AI, your friendly business assistant. I can help you with business insights, analytics, and general conversation. How can I assist you today?",
       timestamp: new Date()
     }
   ]);
@@ -114,7 +114,7 @@ const Reports = () => {
   const { data: enhancedStats, isLoading: statsLoading } = useQuery({
     queryKey: ['enhanced-stats'],
     queryFn: async () => {
-      const response = await fetch('https://zaidawn.site/wp-json/ims/v1/dashboard/enhanced-stats');
+      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/dashboard/enhanced-stats');
       if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     },
@@ -390,7 +390,7 @@ USER QUESTION: ${userMessage}
 Please provide a helpful, well-formatted response based on the current business data above.`;
     } else {
       // For general conversation, create a friendly AI persona without business context
-      const personalityInUrdu = `آپ Nexus AI ہیں، ایک دوستانہ اور ذہین کاروباری معاون۔ آپ عام گفتگو کر سکتے ہیں اور ضرورت پڑنے پر کاروباری بصیرت میں بھی مدد کر سکتے ہیں۔
+      const personalityInUrdu = `آپ Usman Hardware AI ہیں، ایک دوستانہ اور ذہین کاروباری معاون۔ آپ عام گفتگو کر سکتے ہیں اور ضرورت پڑنے پر کاروباری بصیرت میں بھی مدد کر سکتے ہیں۔
 
 شخصیت کی خصوصیات:
 - آپ گرم، دوستانہ، اور گفتگو کرنے والے ہیں
@@ -411,7 +411,7 @@ Please provide a helpful, well-formatted response based on the current business 
 
 برائے کرم قدرتی اور گفتگو کے انداز میں جواب دیں۔ صرف اسی وقت کاروباری معلومات شامل کریں جب خاص طور پر مانگی جائے۔`;
 
-      const personalityInEnglish = `You are Nexus AI, a friendly and intelligent business assistant. You can have casual conversations and also help with business insights when needed. 
+      const personalityInEnglish = `You are Usman Hardware AI, a friendly and intelligent business assistant. You can have casual conversations and also help with business insights when needed. 
 
 PERSONALITY TRAITS:
 - You are warm, friendly, and conversational
@@ -674,7 +674,7 @@ Please respond naturally and conversationally. Only include business information
                 </div>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Nexus AI</h1>
+                <h1 className="text-xl font-bold text-foreground">Usman Hardware AI</h1>
                 <p className="text-xs text-muted-foreground">
                   {currentLanguage === 'ur-PK' ? 'آپ کا دوستانہ معاون' : 'Your Friendly Assistant'}
                 </p>
