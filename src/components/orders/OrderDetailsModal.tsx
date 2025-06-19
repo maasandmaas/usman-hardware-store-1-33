@@ -727,6 +727,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                   className="bg-orange-600 hover:bg-orange-700 text-white min-w-32"
                 >
                   {adjustmentLoading ? 'Processing...' : 'Process Return'}
+                  
                 </Button>
               </div>
             </div>
