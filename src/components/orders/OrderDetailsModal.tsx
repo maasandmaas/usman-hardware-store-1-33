@@ -537,16 +537,10 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                     <span>PKR {order.discount.toFixed(2)}</span>
                   </div>
                 )}
-                {order.tax > 0 && (
-                  <div className="flex justify-between">
-                    <span>Tax:</span>
-                    <span>PKR {order.tax.toFixed(2)}</span>
-                  </div>
-                )}
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
-                  <span>PKR {(order.total || 0).toFixed(2)}</span>
+                  <span>PKR {((order.subtotal || 0) - (order.discount || 0)).toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>

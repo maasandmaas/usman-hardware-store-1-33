@@ -170,14 +170,8 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         </div>
 
         {/* Customer, Payment, Order Status */}
-        <div className="p-3 border-b border-border bg-muted/50 flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium text-card-foreground flex items-center gap-2 text-sm">
-              <User className="h-4 w-4" />
-              Customer
-            </h3>
-          </div>
-          
+        <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
+         
           {selectedCustomer ? (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-2 rounded-lg">
               <div className="flex items-center justify-between">
@@ -197,7 +191,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </div>
           ) : (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 p-2 rounded-lg">
-              <p className="text-xs text-green-800 dark:text-green-200 mb-2 font-medium">Cash Sale (Walk-in Customer)</p>
+              
               <div className="flex gap-1">
                 <Button
                   variant="outline"
@@ -219,12 +213,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </div>
           )}
         </div>
-        <div className="p-3 border-b border-border bg-muted/50 flex-shrink-0">
+        <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-card-foreground flex items-center gap-2">
-              <CreditCard className="h-3 w-3" />
-              Payment Method
-            </Label>
+           
             <Select value={paymentMethod} onValueChange={onSetPaymentMethod}>
               <SelectTrigger className="h-8 text-xs bg-background border-input">
                 <SelectValue />
@@ -238,9 +229,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </Select>
           </div>
         </div>
-        <div className="p-3 border-b border-border bg-muted/50 flex-shrink-0">
+        <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-card-foreground">Order Status</Label>
+            
             <Select value={orderStatus} onValueChange={onSetOrderStatus}>
               <SelectTrigger className="h-8 text-xs bg-background border-input">
                 <SelectValue />
