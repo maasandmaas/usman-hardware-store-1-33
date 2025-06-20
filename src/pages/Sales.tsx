@@ -105,7 +105,7 @@ const Sales = () => {
     try {
       setLoading(true);
       const response = await productsApi.getAll({ 
-        limit: 100,
+        limit: 1000,
         status: 'active'
       });
       if (response.success && response.data) {
