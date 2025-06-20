@@ -59,6 +59,24 @@ const Inventory = () => {
     fetchInventory();
   }, [currentPage]);
 
+  // Add function to fetch all products for the modal
+  const fetchAllProductsForModal = async (): Promise<any[]> => {
+    try {
+      const response = await inventoryApi.getAll({
+        limit: 10000 // Large number to get all products
+      });
+      
+      if (response.success) {
+        const inventoryData = response.data?.inventory || response.data || [];
+        return Array.isArray(inventoryData) ? inventoryData : [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch all products for modal:', error);
+      return [];
+    }
+  };
+
   const fetchInventory = async () => {
     try {
       setLoading(true);
@@ -413,7 +431,7 @@ const Inventory = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
+    <div className="flex-1 p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <div>
@@ -685,13 +703,13 @@ const Inventory = () => {
         </Dialog>
       )}
 
-      {/* Filtered Products Modal */}
+      {/* Filtered Products Modal - Now with fetchAllProducts function */}
       <FilteredProductsModal
         open={filteredProductsModal.open}
         onOpenChange={(open) => setFilteredProductsModal(prev => ({ ...prev, open }))}
         title={filteredProductsModal.title}
-        products={inventory}
         filterType={filteredProductsModal.filterType}
+        onFetchAllProducts={fetchAllProductsForModal}
       />
     </div>
   );

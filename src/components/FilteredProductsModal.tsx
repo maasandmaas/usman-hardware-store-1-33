@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,30 +9,54 @@ interface FilteredProductsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  products: any[];
   filterType: 'lowStock' | 'outOfStock' | 'inStock' | 'all';
+  onFetchAllProducts?: () => Promise<any[]>;
 }
 
 export const FilteredProductsModal: React.FC<FilteredProductsModalProps> = ({
   open,
   onOpenChange,
   title,
-  products,
-  filterType
+  filterType,
+  onFetchAllProducts
 }) => {
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && onFetchAllProducts) {
+      fetchAllProducts();
+    }
+  }, [open, onFetchAllProducts]);
+
+  const fetchAllProducts = async () => {
+    if (!onFetchAllProducts) return;
+    
+    try {
+      setLoading(true);
+      const products = await onFetchAllProducts();
+      setAllProducts(Array.isArray(products) ? products : []);
+    } catch (error) {
+      console.error('Failed to fetch all products:', error);
+      setAllProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getFilteredProducts = () => {
     switch (filterType) {
       case 'lowStock':
-        return products.filter(product => 
+        return allProducts.filter(product => 
           (product.stock || product.currentStock || 0) <= (product.minStock || 0) && 
           (product.stock || product.currentStock || 0) > 0
         );
       case 'outOfStock':
-        return products.filter(product => (product.stock || product.currentStock || 0) === 0);
+        return allProducts.filter(product => (product.stock || product.currentStock || 0) === 0);
       case 'inStock':
-        return products.filter(product => (product.stock || product.currentStock || 0) > (product.minStock || 0));
+        return allProducts.filter(product => (product.stock || product.currentStock || 0) > (product.minStock || 0));
       default:
-        return products;
+        return allProducts;
     }
   };
 
@@ -57,12 +81,17 @@ export const FilteredProductsModal: React.FC<FilteredProductsModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-blue-600" />
-            {title} ({filteredProducts.length} products)
+            {title} ({loading ? 'Loading...' : `${filteredProducts.length} products`})
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3 animate-pulse" />
+              <div className="text-muted-foreground">Loading all products...</div>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <div className="text-muted-foreground">No products found for this filter</div>
