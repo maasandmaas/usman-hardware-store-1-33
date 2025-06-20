@@ -27,6 +27,7 @@ const Suppliers = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch suppliers
+  
   const { data: suppliersData, isLoading } = useQuery({
     queryKey: ['suppliers', currentPage, searchTerm, statusFilter],
     queryFn: () => suppliersApi.getAll({
