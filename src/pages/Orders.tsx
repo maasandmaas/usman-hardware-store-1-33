@@ -132,11 +132,58 @@ const Orders = () => {
         errorCorrectionLevel: 'H'
       });
 
-      // Create 80mm thermal receipt
+      // --- DYNAMIC HEIGHT CALCULATION ---
+      // Static section heights (in mm)
+      let staticHeight = 0;
+      staticHeight += 8;   // Top margin
+      staticHeight += 40;  // Header section
+      staticHeight += 16;  // Receipt title
+      staticHeight += 26 + 4; // Receipt details box + spacing
+      staticHeight += 7;   // Items header
+      staticHeight += 3;   // Separator line after items
+      staticHeight += 6;   // Space after separator
+      staticHeight += 12;  // Totals section
+      staticHeight += 5 + 5 + 12; // Payment method title + badge + spacing
+      staticHeight += 4 + 28; // QR code title + QR code section
+      staticHeight += 20;  // Thank you message section
+      staticHeight += 23;  // Footer policies section
+      staticHeight += 8;   // Final footer (generated, receipt id)
+
+      // Calculate items section height
+      let itemsHeight = 0;
+      order.items.forEach((item: any) => {
+        const maxCharsPerLine = 20;
+        const productName = item.productName;
+        let lines = [];
+        if (productName.length <= maxCharsPerLine) {
+          lines.push(productName);
+        } else {
+          let remaining = productName;
+          while (remaining.length > maxCharsPerLine) {
+            let breakPoint = maxCharsPerLine;
+            const lastSpace = remaining.substring(0, maxCharsPerLine).lastIndexOf(' ');
+            if (lastSpace > maxCharsPerLine * 0.7) {
+              breakPoint = lastSpace;
+            }
+            lines.push(remaining.substring(0, breakPoint));
+            remaining = remaining.substring(breakPoint).trim();
+          }
+          if (remaining.length > 0) {
+            lines.push(remaining);
+          }
+        }
+        const itemHeight = Math.max(5, lines.length * 4);
+        itemsHeight += itemHeight;
+      });
+
+      // Add a little extra margin for safety
+      const totalHeight = staticHeight + itemsHeight + 10;
+
+      // Create 80mm thermal receipt with dynamic height
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [80, 250] // 80mm width, sufficient height
+        format: [80, totalHeight]
       });
 
       const pageWidth = 80;
@@ -260,19 +307,15 @@ const Orders = () => {
       pdf.setFontSize(7);
       
       order.items.forEach((item: any, index: number) => {
-        // Calculate how many lines needed for product name
         const maxCharsPerLine = 20;
         const productName = item.productName;
         const lines = [];
-        
         if (productName.length <= maxCharsPerLine) {
           lines.push(productName);
         } else {
-          // Split into multiple lines
           let remaining = productName;
           while (remaining.length > maxCharsPerLine) {
             let breakPoint = maxCharsPerLine;
-            // Try to break at a space
             const lastSpace = remaining.substring(0, maxCharsPerLine).lastIndexOf(' ');
             if (lastSpace > maxCharsPerLine * 0.7) {
               breakPoint = lastSpace;
@@ -284,25 +327,17 @@ const Orders = () => {
             lines.push(remaining);
           }
         }
-        
         const itemHeight = Math.max(5, lines.length * 4);
-        
-        // Alternating row colors for better readability
         if (index % 2 === 1) {
           pdf.setFillColor(248, 250, 252);
           pdf.rect(5, yPos, pageWidth - 10, itemHeight, 'F');
         }
-        
-        // Product name - complete with line breaks - LEFT ALIGNED
         lines.forEach((line, lineIndex) => {
           pdf.text(line, 8, yPos + 3 + (lineIndex * 3.5));
         });
-        
-        // Quantity, rate, total aligned to specific positions - LEFT ALIGNED
         pdf.text(item.quantity.toString(), 50, yPos + 3);
         pdf.text(item.unitPrice.toFixed(0), 58, yPos + 3);
         pdf.text(item.total.toFixed(0), 68, yPos + 3);
-        
         yPos += itemHeight;
       });
 
@@ -315,16 +350,11 @@ const Orders = () => {
 
       // TOTALS SECTION - LEFT ALIGNED (NO TAX)
       const totalsStartX = 8;
-      
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
-      
-      // Show subtotal first
       pdf.text('Subtotal:', totalsStartX, yPos);
       pdf.text(`PKR ${order.subtotal.toFixed(0)}`, totalsStartX + 42, yPos);
       yPos += 4;
-      
-      // Show discount if any
       if (order.discount > 0) {
         pdf.setTextColor(220, 38, 127);
         pdf.text('Discount:', totalsStartX, yPos);
@@ -332,17 +362,13 @@ const Orders = () => {
         pdf.setTextColor(0, 0, 0);
         yPos += 4;
       }
-      
-      // Grand Total with emphasis - LEFT ALIGNED (subtotal minus discount, NO TAX)
       pdf.setFillColor(26, 54, 93);
-      // pdf.roundedRect(totalsStartX, yPos, 45, 6, 1, 1, 'F');
       pdf.roundedRect(5, yPos, pageWidth - 8, 7, 1, 1, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
       pdf.text('TOTAL:', 8, yPos + 4);
       pdf.text(`PKR ${finalTotal.toFixed(0)}`, 50, yPos + 4.5);
-      
       yPos += 12;
 
       // PAYMENT METHOD centered
@@ -351,17 +377,13 @@ const Orders = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('Payment Method:', pageWidth / 2, yPos, { align: 'center' });
       yPos += 5;
-      
-      // Payment badge centered
       const paymentColor = order.paymentMethod === 'cash' ? [34, 197, 94] : [59, 130, 246];
       pdf.setFillColor(paymentColor[0], paymentColor[1], paymentColor[2]);
       pdf.roundedRect(pageWidth / 2 - 12, yPos, 24, 5, 2, 2, 'F');
-      
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(7);
       pdf.text(order.paymentMethod.toUpperCase(), pageWidth / 2, yPos + 3.5, { align: 'center' });
-      
       yPos += 12;
 
       // QR CODE SECTION centered
@@ -370,54 +392,43 @@ const Orders = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('Scan to Verify:', pageWidth / 2, yPos, { align: 'center' });
       yPos += 4;
-      
-      // QR frame centered
       const qrSize = 20;
       const qrX = pageWidth / 2 - qrSize / 2;
-      
       pdf.setFillColor(255, 255, 255);
       pdf.roundedRect(qrX - 2, yPos, qrSize + 4, qrSize + 4, 1, 1, 'F');
       pdf.setDrawColor(26, 54, 93);
       pdf.setLineWidth(0.5);
       pdf.roundedRect(qrX - 2, yPos, qrSize + 4, qrSize + 4, 1, 1, 'S');
-      
       pdf.addImage(qrCodeDataURL, 'PNG', qrX, yPos + 2, qrSize, qrSize);
-      
       yPos += 28;
 
       // THANK YOU MESSAGE centered
       pdf.setFillColor(248, 250, 252);
       pdf.roundedRect(6, yPos, pageWidth - 12, 15, 2, 2, 'F');
-      
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(26, 54, 93);
       pdf.text('Thank You!', pageWidth / 2, yPos + 6, { align: 'center' });
-      
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
       pdf.text('Your trust means everything to us', pageWidth / 2, yPos + 10, { align: 'center' });
       pdf.text('Visit us again soon!', pageWidth / 2, yPos + 13, { align: 'center' });
-      
       yPos += 20;
 
       // FOOTER POLICIES centered
       pdf.setFillColor(26, 54, 93);
       pdf.roundedRect(4, yPos, pageWidth - 8, 18, 1, 1, 'F');
-      
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'bold');
       pdf.text('EXCHANGE POLICY', pageWidth / 2, yPos + 4, { align: 'center' });
-      
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(5);
       pdf.text('Items exchangeable within 7 days', pageWidth / 2, yPos + 7, { align: 'center' });
       pdf.text('Original receipt required', pageWidth / 2, yPos + 10, { align: 'center' });
       pdf.text('Support: +92-300-1234567', pageWidth / 2, yPos + 13, { align: 'center' });
       pdf.text('Hours: Mon-Sat 9AM-8PM', pageWidth / 2, yPos + 16, { align: 'center' });
-      
       yPos += 23;
 
       // FINAL FOOTER centered
