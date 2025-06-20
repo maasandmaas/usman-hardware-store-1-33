@@ -130,7 +130,7 @@ const Finance = () => {
 
   const handleRecordPayment = async (paymentData: any) => {
     try {
-      const res = await fetch("https://usmanhardware.site//wp-json/ims/v1/finance/payments", {
+      const res = await fetch("https://zaidawn.site/wp-json/ims/v1/finance/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -209,7 +209,7 @@ const Finance = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 bg-background min-h-[calc(100vh-65px)] no-horizontal-scroll">
+    <div className="flex-1 p-4 md:p-6 space-y-6 bg-background min-h-screen no-horizontal-scroll">
       {/* Header and Actions: Now stacked responsively */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">

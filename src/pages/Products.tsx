@@ -506,10 +506,11 @@ const Products = () => {
   }
 
   return (
-    <div className="flex-1 p-2 space-y-3 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
+    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
       {/* HEADER AND BUTTONS: now stacked on small screens */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
+          <SidebarTrigger />
           <div>
             <h1 className="text-3xl font-bold text-foreground">Products Management</h1>
             <p className="text-muted-foreground">Manage your inventory and product catalog</p>
@@ -614,8 +615,8 @@ const Products = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-        <Card className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('all', 'All Products')}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Package className="h-8 w-8 text-blue-500" />
@@ -627,7 +628,7 @@ const Products = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500 cursor-pointer hover:shadow-lg transition-shadow">
+        <Card className="border-l-4 border-l-green-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('inStock', 'Products In Stock')}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Package className="h-8 w-8 text-green-500" />
@@ -651,7 +652,7 @@ const Products = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 cursor-pointer hover:shadow-lg transition-shadow">
+        <Card className="border-l-4 border-l-purple-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('all', 'All Categories')}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Package className="h-8 w-8 text-purple-500" />
@@ -665,7 +666,7 @@ const Products = () => {
       </div>
 
       <Card>
-        <CardContent className="p-2">
+        <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -692,8 +693,18 @@ const Products = () => {
         </CardContent>
       </Card>
 
-      <Card className=" p-2">
-        <CardContent className="pb-1">
+      <Card className="flex-1">
+        <CardHeader>
+          <CardTitle>
+            Product Inventory 
+            {pagination.totalItems > 0 && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                ({pagination.totalItems} total items)
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-lg text-muted-foreground">Loading...</div>
@@ -704,7 +715,7 @@ const Products = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
                 {products.map((product) => (
                   <Card key={product.id} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-4">

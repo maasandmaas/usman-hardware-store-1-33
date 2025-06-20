@@ -135,7 +135,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         console.log('Updating payment method from', order.paymentMethod, 'to:', editValues.paymentMethod);
         
         // Use the existing details endpoint for payment method updates
-        const response = await fetch(`https://usmanhardware.site//wp-json/ims/v1/sales/${order.id}/details`, {
+        const response = await fetch(`https://zaidawn.site/wp-json/ims/v1/sales/${order.id}/details`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -158,7 +158,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         const updateData = { customerId: editValues.customerId };
         console.log('Updating customer to:', editValues.customerId);
         
-        const response = await fetch(`https://usmanhardware.site//wp-json/ims/v1/sales/${order.id}/details`, {
+        const response = await fetch(`https://zaidawn.site/wp-json/ims/v1/sales/${order.id}/details`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData)
@@ -537,10 +537,16 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                     <span>PKR {order.discount.toFixed(2)}</span>
                   </div>
                 )}
+                {order.tax > 0 && (
+                  <div className="flex justify-between">
+                    <span>Tax:</span>
+                    <span>PKR {order.tax.toFixed(2)}</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
-                  <span>PKR {((order.subtotal || 0) - (order.discount || 0)).toFixed(2)}</span>
+                  <span>PKR {(order.total || 0).toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -727,7 +733,6 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                   className="bg-orange-600 hover:bg-orange-700 text-white min-w-32"
                 >
                   {adjustmentLoading ? 'Processing...' : 'Process Return'}
-                  
                 </Button>
               </div>
             </div>

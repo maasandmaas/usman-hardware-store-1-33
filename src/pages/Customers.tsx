@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { customersApi } from "@/services/api";
 import { CustomerEditModal } from "@/components/customers/CustomerEditModal";
 import { useCustomerBalance } from "@/hooks/useCustomerBalance";
-import { CustomerCards } from "@/components/customers/CustomerCards";
-import { CustomersPagination } from "@/components/customers/CustomersPagination";
 
 const Customers = () => {
   const { toast } = useToast();
@@ -27,7 +25,6 @@ const Customers = () => {
   const [customerTypeFilter, setCustomerTypeFilter] = useState("all");
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [customersLoading, setCustomersLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -46,12 +43,13 @@ const Customers = () => {
     { value: "business", label: "Business" },
   ];
 
-  // Debounced search
-  const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    fetchCustomers();
+  }, [searchTerm, customerTypeFilter]);
 
-  const fetchCustomers = useCallback(async (page = 1, search = searchTerm, type = customerTypeFilter) => {
+  const fetchCustomers = async (page = 1) => {
     try {
-      setCustomersLoading(true);
+      setLoading(true);
       const params: any = {
         page,
         limit: 20,
@@ -60,8 +58,8 @@ const Customers = () => {
         allTime: true
       };
       
-      if (search) params.search = search;
-      if (type !== 'all') params.type = type;
+      if (searchTerm) params.search = searchTerm;
+      if (customerTypeFilter !== 'all') params.type = customerTypeFilter;
 
       console.log('Fetching customers with params:', params);
       const response = await customersApi.getAll(params);
@@ -73,6 +71,14 @@ const Customers = () => {
         const customersArray = apiData?.customers || [];
         
         console.log('Customers from API:', customersArray);
+        
+        // Log specific customers to debug the totalPurchases issue
+        customersArray.forEach(customer => {
+          if (customer.lastPurchase && (customer.totalPurchases === 0 || customer.totalPurchases === null)) {
+            console.warn(`Customer ${customer.name} has lastPurchase: ${customer.lastPurchase} but totalPurchases: ${customer.totalPurchases}`);
+          }
+        });
+        
         setCustomers(customersArray);
         
         // Use pagination info from API
@@ -104,36 +110,8 @@ const Customers = () => {
         variant: "destructive"
       });
     } finally {
-      setCustomersLoading(false);
       setLoading(false);
     }
-  }, [searchTerm, customerTypeFilter, toast]);
-
-  // Initial load
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  // Handle search with debouncing
-  useEffect(() => {
-    if (searchDebounce) {
-      clearTimeout(searchDebounce);
-    }
-
-    const timeout = setTimeout(() => {
-      fetchCustomers(1, searchTerm, customerTypeFilter);
-    }, 500);
-
-    setSearchDebounce(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [searchTerm, customerTypeFilter]);
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    fetchCustomers(page, searchTerm, customerTypeFilter);
   };
 
   // Handle manual balance sync
@@ -141,7 +119,7 @@ const Customers = () => {
     try {
       setSyncing(true);
       await syncAllCustomerBalances();
-      await fetchCustomers(pagination.currentPage);
+      await fetchCustomers(); // Refresh the data
     } catch (error) {
       console.error('Failed to sync balances:', error);
     } finally {
@@ -157,7 +135,7 @@ const Customers = () => {
       
       if (response.success) {
         setIsDialogOpen(false);
-        fetchCustomers(1); // Reset to first page after adding
+        fetchCustomers();
         toast({
           title: "Customer Added",
           description: "New customer has been added successfully.",
@@ -183,7 +161,7 @@ const Customers = () => {
     try {
       const response = await customersApi.update(customerId, formData);
       if (response.success) {
-        fetchCustomers(pagination.currentPage);
+        fetchCustomers();
         toast({
           title: "Customer Updated",
           description: "Customer has been updated successfully.",
@@ -213,22 +191,44 @@ const Customers = () => {
 
   // Handle customer updated
   const handleCustomerUpdated = () => {
-    fetchCustomers(pagination.currentPage);
+    fetchCustomers();
     setIsEditModalOpen(false);
     setCustomerToEdit(null);
   };
 
   // Handle customer deleted
   const handleCustomerDeleted = () => {
-    fetchCustomers(pagination.currentPage);
+    fetchCustomers();
     setIsEditModalOpen(false);
     setCustomerToEdit(null);
   };
+
+  const filteredCustomers = customers.filter(customer => {
+    if (!customer) return false;
+    
+    const matchesSearch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customer.phone?.includes(searchTerm) ||
+                         customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = customerTypeFilter === "all" || customer.type === customerTypeFilter;
+    return matchesSearch && matchesType;
+  });
 
   // Use the currentBalance from API data
   const totalDues = customers.reduce((sum, customer) => sum + (customer.currentBalance || 0), 0);
   const activeCustomers = customers.filter(c => c.status === "active" || !c.status).length;
   const customersWithDues = customers.filter(c => (c.currentBalance || 0) > 0).length;
+
+  const getCustomerTypeColor = (type: string) => {
+    const colors = {
+      individual: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+      business: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+    };
+    return colors[type] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
+  };
+
+  const getStatusColor = (status: string) => {
+    return status === "active" || !status ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100";
+  };
 
   if (loading) {
     return (
@@ -241,8 +241,8 @@ const Customers = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
-      {/* HEADER + ACTIONS */}
+    <div className="flex-1 p-6 space-y-6 min-h-screen bg-background no-horizontal-scroll">
+      {/* HEADER + ACTIONS: now stacked properly */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
@@ -281,7 +281,7 @@ const Customers = () => {
               <Users className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Customers</p>
-                <p className="text-2xl font-bold text-blue-600">{pagination.totalItems}</p>
+                <p className="text-2xl font-bold text-blue-600">{customers.length}</p>
               </div>
             </div>
           </CardContent>
@@ -354,26 +354,98 @@ const Customers = () => {
       </Card>
 
       {/* Customers Grid */}
-      <CustomerCards
-        customers={customers}
-        loading={customersLoading}
-        onSelectCustomer={setSelectedCustomer}
-        onEditCustomer={handleEditCustomer}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {filteredCustomers.length === 0 ? (
+          <Card className="col-span-full">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No customers found</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredCustomers.map((customer) => (
+            <Card key={customer.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg text-foreground">{customer.name}</CardTitle>
+                      <Badge className={`text-xs ${getCustomerTypeColor(customer.type || 'business')}`}>
+                        {customer.type || 'business'}
+                      </Badge>
+                      <Badge className={`text-xs ${getStatusColor(customer.status)}`}>
+                        {customer.status || 'active'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Phone className="h-4 w-4" />
+                      {customer.phone || 'No phone'}
+                    </div>
+                  </div>
+                  {(customer.currentBalance || 0) > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      Due: PKR {customer.currentBalance?.toLocaleString()}
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span className="truncate">{customer.address || 'Address not provided'}</span>
+                </div>
 
-      {/* Pagination */}
-      <Card>
-        <CardContent className="p-4">
-          <CustomersPagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.totalItems}
-            itemsPerPage={pagination.itemsPerPage}
-            onPageChange={handlePageChange}
-            loading={customersLoading}
-          />
-        </CardContent>
-      </Card>
+                {customer.email && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span className="truncate">{customer.email}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Total Purchases</p>
+                    <p className="font-bold text-green-600">PKR {customer.totalPurchases?.toLocaleString() || '0'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Credit Limit</p>
+                    <p className="font-medium text-foreground">PKR {customer.creditLimit?.toLocaleString() || '0'}</p>
+                  </div>
+                </div>
+
+                {customer.lastPurchase && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Last purchase: {customer.lastPurchase}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setSelectedCustomer(customer)}
+                  >
+                    View Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
+                    onClick={() => handleEditCustomer(customer)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       {/* Customer Details Dialog */}
       {selectedCustomer && (

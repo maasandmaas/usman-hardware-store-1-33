@@ -183,13 +183,13 @@ const AccountsReceivable = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-[calc(100vh-65px)]">
+    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-slate-50">
       <div className="flex items-center gap-4 mb-8">
         <SidebarTrigger />
         <div>
-          <h1 className="text-3xl font-bold text-gray-500">Accounts Receivable</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Accounts Receivable</h1>
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-gray-300">Track customer payments and outstanding invoices</p>
+            <p className="text-slate-600">Track customer payments and outstanding invoices</p>
             {!apiConnected && (
               <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
                 Demo Data
@@ -208,7 +208,7 @@ const AccountsReceivable = () => {
                 <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-300">Total Overdue</p>
+                <p className="text-sm text-slate-600">Total Overdue</p>
                 <p className="text-2xl font-bold text-red-600">Rs. {summary.overdueAmount.toLocaleString()}</p>
               </div>
             </div>
@@ -222,7 +222,7 @@ const AccountsReceivable = () => {
                 <Calendar className="h-6 w-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-300">Due Today</p>
+                <p className="text-sm text-slate-600">Due Today</p>
                 <p className="text-2xl font-bold text-yellow-600">Rs. {totalDueToday.toLocaleString()}</p>
               </div>
             </div>
@@ -236,7 +236,7 @@ const AccountsReceivable = () => {
                 <DollarSign className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-300">Total Outstanding</p>
+                <p className="text-sm text-slate-600">Total Outstanding</p>
                 <p className="text-2xl font-bold text-blue-600">Rs. {summary.totalReceivables.toLocaleString()}</p>
               </div>
             </div>
@@ -282,15 +282,15 @@ const AccountsReceivable = () => {
               <div key={`${item.customerId}-${item.invoiceNumber}-${item.id}-${item.amount}`} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
                 <div className="flex items-center gap-4">
                   <div>
-                    <h3 className="font-medium text-gray-300">{item.customerName}</h3>
-                    <p className="text-sm text-gray-300">Invoice: {item.invoiceNumber}</p>
+                    <h3 className="font-medium text-slate-900">{item.customerName}</h3>
+                    <p className="text-sm text-slate-600">Invoice: {item.invoiceNumber}</p>
                     <p className="text-xs text-slate-500">Due: {new Date(item.dueDate).toLocaleDateString()}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-lg font-bold text-gray-100">Rs. {item.balance.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-slate-900">Rs. {item.balance.toLocaleString()}</p>
                     <p className="text-xs text-slate-500">Paid: Rs. {item.paidAmount.toLocaleString()}</p>
                     {getStatusBadge(item)}
                   </div>

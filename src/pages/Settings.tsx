@@ -80,7 +80,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-background min-h-[calc(100vh-65px)]">
+    <div className="p-6 space-y-6 bg-background min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger />

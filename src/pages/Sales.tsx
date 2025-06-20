@@ -105,7 +105,7 @@ const Sales = () => {
     try {
       setLoading(true);
       const response = await productsApi.getAll({ 
-        limit: 1000,
+        limit: 100,
         status: 'active'
       });
       if (response.success && response.data) {
@@ -615,8 +615,7 @@ const Sales = () => {
       pdf.text('Payment Method:', pageWidth / 2, yPos, { align: 'center' });
       yPos += 5;
       
-      // Payment bad
-      // ge centered
+      // Payment badge centered
       const paymentColor = order.paymentMethod === 'cash' ? [34, 197, 94] : [59, 130, 246];
       pdf.setFillColor(paymentColor[0], paymentColor[1], paymentColor[2]);
       pdf.roundedRect(pageWidth / 2 - 12, yPos, 24, 5, 2, 2, 'F');
@@ -740,15 +739,78 @@ const Sales = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-65px)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Main POS Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
+        {/* Header */}
+        <div className="bg-background shadow-sm border-b px-3 md:px-4 py-3 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+              <SidebarTrigger />
+              <div className="flex items-center gap-2 min-w-0">
+                <Package className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <h1 className="text-sm md:text-base font-semibold text-foreground truncate">
+                    Sales System (POS)
+                  </h1>
+                  <p className="text-xs text-muted-foreground hidden sm:block">
+                    Usman Hardware - Hafizabad
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              {/* Mobile Cart Toggle */}
+              {isMobile && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setIsCartOpen(!isCartOpen)}
+                  className="h-8 w-8 p-0 md:hidden relative"
+                >
+                  <Package className="h-4 w-4" />
+                  {totalCartItems > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-blue-600">
+                      {totalCartItems}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+              
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full hidden md:inline">
+                {totalCartItems} items - PKR {totalCartValue.toLocaleString()}
+              </span>
+              
+              {/* Fullscreen Toggle Button */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={toggleFullscreen}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize className="h-4 w-4" />
+                ) : (
+                  <Maximize className="h-4 w-4" />
+                )}
+              </Button>
+              
+              <Button 
+                size="sm" 
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
+                onClick={() => setIsTodaysOrdersOpen(true)}
+              >
+                Today's Orders
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Products Section - NO SCROLLBARS, FIXED HEIGHT */}
         <div className="flex-1 overflow-hidden bg-background flex flex-col min-h-0">
-          <div className="p-1  md:p-4 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="p-3 md:p-4 flex-shrink-0">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
                 <Package className="h-4 w-4 text-blue-600" />
                 Products
@@ -760,17 +822,8 @@ const Sales = () => {
                   </Badge>
                 )}
               </h2>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full hidden md:inline">
-                {totalCartItems} items - PKR {totalCartValue.toLocaleString()}
-              </span>
+              
               {/* Quick Add Product Button */}
-              <Button 
-                size="sm" 
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
-                onClick={() => setIsTodaysOrdersOpen(true)}
-              >
-                Today's Orders
-              </Button>
               <Button
                 onClick={() => setIsQuickProductAddOpen(true)}
                 className="bg-green-600 hover:bg-green-700 text-white text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
@@ -778,7 +831,6 @@ const Sales = () => {
                 <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                 Quick Add Product
               </Button>
-              
             </div>
             
             <div className="relative mb-4">
@@ -792,9 +844,12 @@ const Sales = () => {
             </div>
 
             {/* Dynamic Category Filter Bar */}
-            <div className="bg-muted/50 border border-border rounded-lg p-2 mb-4">
-             
-              <div className="flex gap-1 flex-wrap">
+            <div className="bg-muted/50 border border-border rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Filter by Category:</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={selectedCategory === null ? "default" : "outline"}
                   size="sm"

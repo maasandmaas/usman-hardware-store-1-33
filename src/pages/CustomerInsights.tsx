@@ -155,7 +155,7 @@ export default function CustomerInsights() {
   }
 
   return (
-    <div className="p-6 space-y-6 min-h-[calc(100vh-65px)]">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Customer Insights</h1>
@@ -315,13 +315,13 @@ export default function CustomerInsights() {
             <CardContent>
               <div className="space-y-4">
                 {(insights?.topCustomers || []).slice(0, 5).map((customer, index) => (
-                  <div key={customer.id} className="flex items-center justify-between p-4 border-2 rounded-lg">
+                  <div key={customer.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-                        <span className="text-sm font-bold text-slate-500">#{index + 1}</span>
+                        <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-500">{customer.name}</h3>
+                        <h3 className="font-medium text-gray-900">{customer.name}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           {getTypeBadge(customer.type)}
                           <span className="text-sm text-gray-500 flex items-center gap-1">

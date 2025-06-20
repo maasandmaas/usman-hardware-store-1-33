@@ -255,7 +255,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Month Revenue</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                        Rs. {(stats?.financial?.monthRevenue)?.toFixed(0) || '0'}
+                        Rs. {(stats?.financial?.monthRevenue / 1000)?.toFixed(0) || '0'}k
                       </p>
                       <p className="text-xs text-white/80">
                         {stats?.financial?.monthlyGrowth?.toFixed(1) || '0'}% growth
@@ -274,13 +274,12 @@ export default function Dashboard() {
                 <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-xs font-medium text-white/90 mb-1">Monthly Profit</p>
+                      <p className="text-xs font-medium text-white/90 mb-1">Profit Margin</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {(stats?.financial?.netProfit)?.toFixed(0) || '0'}
-                        
+                        {stats?.financial?.profitMargin?.toFixed(1) || '0'}%
                       </p>
                       <p className="text-xs text-white/80">
-                        Rs. {stats?.financial?.profitMargin?.toFixed(1) || '0'}% profit Margin
+                        Rs. {(stats?.financial?.netProfit / 1000)?.toFixed(0) || '0'}k profit
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 rounded-full">
