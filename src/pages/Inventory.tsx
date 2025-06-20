@@ -116,7 +116,7 @@ const Inventory = () => {
         } else {
           // If no pagination info, assume there might be more data
           // Set a reasonable estimate based on current data
-          finalTotalItems = Math.max(inventoryArray.length, 45); // Assume at least 45 products as mentioned
+          finalTotalItems = Math.max(inventoryArray.length, summary.totalProducts); // Assume at least summary.totalProducts products as mentioned
           finalTotalPages = Math.ceil(finalTotalItems / itemsPerPage);
         }
         

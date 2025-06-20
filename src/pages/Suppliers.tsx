@@ -155,10 +155,10 @@ const Suppliers = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6">
+    <div className="flex-1 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+        
           <div>
             <h1 className="text-3xl font-bold text-gray-500">Supplier Management</h1>
             <p className="text-gray-600">Manage your suppliers and vendor relationships</p>

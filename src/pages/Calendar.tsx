@@ -80,11 +80,11 @@ const Calendar = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background">
+    <div className="flex-1 p-3 md:p-6 space-y-3 min-h-[calc(100vh-65px)] bg-background">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+   
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <CalendarIcon className="h-8 w-8 text-blue-600" />

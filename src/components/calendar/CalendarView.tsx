@@ -42,7 +42,7 @@ export function CalendarView({ events, selectedDate, onSelectDate, onAddEvent }:
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid lg:grid-cols-3 gap-6">
       {/* Calendar */}
       <Card className="lg:col-span-2">
         <CardHeader>
@@ -82,7 +82,7 @@ export function CalendarView({ events, selectedDate, onSelectDate, onAddEvent }:
             onMonthChange={setCurrentMonth}
             modifiers={modifiers}
             modifiersStyles={modifiersStyles}
-            className="rounded-md border w-full"
+            className="rounded-md border"
             onDayClick={(date) => {
               onSelectDate(date);
             }}

@@ -136,7 +136,7 @@ const Orders = () => {
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [80, 300] // 80mm width, sufficient height
+        format: [80, 250] // 80mm width, sufficient height
       });
 
       const pageWidth = 80;
@@ -682,10 +682,10 @@ const Orders = () => {
   }, []);
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-[calc(100vh-65px)]">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
+    <div className="flex-1 p-2 md:p-6 space-y-3 min-h-[calc(100vh-65px)]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          
           <div>
             <h1 className="text-3xl font-bold text-slate-500">Orders Management</h1>
             <p className="text-slate-600">View and manage all customer orders</p>
@@ -755,14 +755,9 @@ const Orders = () => {
 
       {/* Filters */}
       <Card className="border-slate-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-blue-600" />
-            Orders List
-          </CardTitle>
-        </CardHeader>
+   
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 mt-5 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
               <Input

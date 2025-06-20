@@ -82,9 +82,9 @@ const BackupSync = () => {
   const history = backupHistory?.data.backups || [];
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background">
-      <div className="flex items-center gap-4 mb-8">
-        <SidebarTrigger />
+    <div className="flex-1 p-3 md:p-6 space-y-3 min-h-[calc(100vh-65px)] bg-background">
+      <div className="flex items-center gap-4 mb-3">
+       
         <div>
           <h1 className="text-3xl font-bold text-foreground">Backup & Sync</h1>
           <p className="text-muted-foreground">Manage your data backup and synchronization</p>

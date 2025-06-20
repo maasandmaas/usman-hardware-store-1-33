@@ -234,10 +234,10 @@ const PurchaseOrders = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 h-[calc(100vh-90px)] ">
+    <div className="flex-1 p-3 space-y-3 h-[calc(100vh-90px)] ">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+
           <div>
             <h1 className="text-3xl font-bold text-gray-500">Purchase Orders</h1>
             <p className="text-gray-400">Manage purchase orders and supplier transactions</p>

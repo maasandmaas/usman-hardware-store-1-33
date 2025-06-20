@@ -95,10 +95,10 @@ export default function Notifications() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-background min-h-[calc(100vh-65px)]">
+    <div className="p-3 space-y-3 bg-background min-h-[calc(100vh-65px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+    
           <div>
             <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
             <p className="text-muted-foreground">Stay updated with important business alerts</p>

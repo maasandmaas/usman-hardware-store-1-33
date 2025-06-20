@@ -280,9 +280,9 @@ export default function ExpenseTracking() {
   }
 
   return (
-    <div className="p-6 space-y-6 min-h-[calc(100vh-65px)]">
+    <div className="p-3 space-y-3 min-h-[calc(100vh-65px)]">
       <div className="flex items-center gap-4 mb-8">
-        <SidebarTrigger />
+      
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-500 to-slate-500 bg-clip-text text-transparent">

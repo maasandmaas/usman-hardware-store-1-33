@@ -162,7 +162,7 @@ export default function Dashboard() {
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Today's Revenue</p>
@@ -184,7 +184,7 @@ export default function Dashboard() {
             
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-green-500 to-green-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-green-600 to-green-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Today's Orders</p>
@@ -205,7 +205,7 @@ export default function Dashboard() {
             
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-red-500 to-red-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-red-600 to-red-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Low Stock Items</p>
@@ -226,7 +226,7 @@ export default function Dashboard() {
             
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-purple-500 to-purple-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Total Customers</p>
@@ -250,7 +250,7 @@ export default function Dashboard() {
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-emerald-600 to-emerald-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Month Revenue</p>
@@ -271,7 +271,7 @@ export default function Dashboard() {
 
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-amber-600 to-amber-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Monthly Profit</p>
@@ -293,7 +293,7 @@ export default function Dashboard() {
 
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-cyan-600 to-cyan-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Inventory Value</p>
@@ -314,7 +314,7 @@ export default function Dashboard() {
 
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 text-white">
+                <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Receivables</p>
@@ -984,7 +984,7 @@ export default function Dashboard() {
                         Critical Stock Alerts
                       </h4>
                       <div className="space-y-2">
-                        {inventoryReport.data.inventoryReport.lowStockItems.slice(0, 3).map((item, index) => (
+                        {inventoryReport.data?.inventoryReport?.lowStockItems?.map((item, index) => (
                           <div key={index} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
                             <div>
                               <p className="font-medium">{item.productName}</p>

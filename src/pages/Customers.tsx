@@ -241,11 +241,11 @@ const Customers = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
+    <div className="flex-1 p-6 space-y-3 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
       {/* HEADER + ACTIONS */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
+        <div className="flex items-center gap-3">
+         
           <div>
             <h1 className="text-3xl font-bold text-foreground">Customer Management</h1>
             <p className="text-muted-foreground">Manage customer profiles, dues, and transactions</p>
@@ -274,7 +274,7 @@ const Customers = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

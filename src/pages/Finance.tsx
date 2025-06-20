@@ -181,9 +181,9 @@ const Finance = () => {
 
   if (!overview) {
     return (
-      <div className="flex-1 p-6 space-y-6 bg-background min-h-screen no-horizontal-scroll">
+      <div className="flex-1 p-3 space-y-3 bg-background min-h-screen no-horizontal-scroll">
         <div className="flex items-center gap-4 mb-8">
-          <SidebarTrigger />
+  
           <div>
             <h1 className="text-3xl font-bold text-foreground">Finance Dashboard</h1>
             <p className="text-muted-foreground">Comprehensive financial overview and management</p>

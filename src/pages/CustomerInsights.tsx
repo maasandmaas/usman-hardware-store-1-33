@@ -155,7 +155,7 @@ export default function CustomerInsights() {
   }
 
   return (
-    <div className="p-6 space-y-6 min-h-[calc(100vh-65px)]">
+    <div className="p-3 space-y-3 min-h-[calc(100vh-65px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Customer Insights</h1>
