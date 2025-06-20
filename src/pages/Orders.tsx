@@ -242,7 +242,7 @@ const Orders = () => {
 
       // ITEMS HEADER - LEFT ALIGNED
       pdf.setFillColor(26, 54, 93);
-      pdf.roundedRect(5, yPos, pageWidth - 10, 7, 1, 1, 'F');
+      pdf.roundedRect(5, yPos, pageWidth - 8, 7, 1, 1, 'F');
       
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
@@ -321,7 +321,7 @@ const Orders = () => {
       
       // Show subtotal first
       pdf.text('Subtotal:', totalsStartX, yPos);
-      pdf.text(`PKR ${order.subtotal.toFixed(0)}`, totalsStartX + 35, yPos);
+      pdf.text(`PKR ${order.subtotal.toFixed(0)}`, totalsStartX + 42, yPos);
       yPos += 4;
       
       // Show discount if any
@@ -335,13 +335,13 @@ const Orders = () => {
       
       // Grand Total with emphasis - LEFT ALIGNED (subtotal minus discount, NO TAX)
       pdf.setFillColor(26, 54, 93);
-      pdf.roundedRect(totalsStartX, yPos, 45, 6, 1, 1, 'F');
-      
+      // pdf.roundedRect(totalsStartX, yPos, 45, 6, 1, 1, 'F');
+      pdf.roundedRect(5, yPos, pageWidth - 8, 7, 1, 1, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
-      pdf.text('TOTAL:', totalsStartX + 3, yPos + 4);
-      pdf.text(`PKR ${finalTotal.toFixed(0)}`, totalsStartX + 25, yPos + 4);
+      pdf.text('TOTAL:', 8, yPos + 4);
+      pdf.text(`PKR ${finalTotal.toFixed(0)}`, 50, yPos + 4.5);
       
       yPos += 12;
 
