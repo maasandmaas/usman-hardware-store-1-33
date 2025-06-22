@@ -23,10 +23,10 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !phone.trim()) {
+    if (!name.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please provide customer name and phone number",
+        description: "Please provide customer name",
         variant: "destructive"
       });
       return;
@@ -37,8 +37,8 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
     try {
       const customerData = {
         name: name.trim(),
-        phone: phone.trim(),
-        type: "individual",
+        phone: phone.trim() || "N/A", // Make phone optional, default to N/A
+        type: "Temporary", // Updated to use new enum value
         creditLimit: 0
       };
 
@@ -93,14 +93,15 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
               onChange={(e) => setName(e.target.value)}
               className="border-gray-300"
               disabled={isSubmitting}
+              autoFocus
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number *</Label>
+            <Label htmlFor="phone">Phone Number (Optional)</Label>
             <Input
               id="phone"
-              placeholder="Enter phone number"
+              placeholder="Enter phone number (optional)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="border-gray-300"

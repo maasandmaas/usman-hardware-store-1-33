@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ export const CustomerEditModal = ({
     name: "",
     email: "",
     phone: "",
-    type: "individual",
+    type: "Permanent",
     address: "",
     city: "",
     creditLimit: 0,
@@ -47,7 +46,7 @@ export const CustomerEditModal = ({
         name: customer.name || "",
         email: customer.email || "",
         phone: customer.phone || "",
-        type: customer.type || "individual",
+        type: customer.type || "Permanent",
         address: customer.address || "",
         city: customer.city || "",
         creditLimit: customer.creditLimit || 0,
@@ -76,19 +75,10 @@ export const CustomerEditModal = ({
         return;
       }
 
-      if (!formData.phone.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Phone number is required",
-          variant: "destructive"
-        });
-        return;
-      }
-
       const updateData = {
         name: formData.name.trim(),
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        phone: formData.phone.trim() || "N/A",
         type: formData.type,
         address: formData.address.trim(),
         city: formData.city.trim(),
@@ -179,12 +169,12 @@ export const CustomerEditModal = ({
               </div>
 
               <div>
-                <Label htmlFor="customer-phone">Phone Number *</Label>
+                <Label htmlFor="customer-phone">Phone Number</Label>
                 <Input
                   id="customer-phone"
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="Enter phone number"
+                  placeholder="Enter phone number (optional)"
                 />
               </div>
 
@@ -206,9 +196,9 @@ export const CustomerEditModal = ({
                     <SelectValue placeholder="Select customer type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">Individual</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="contractor">Contractor</SelectItem>
+                    <SelectItem value="Temporary">Temporary</SelectItem>
+                    <SelectItem value="Semi-Permanent">Semi-Permanent</SelectItem>
+                    <SelectItem value="Permanent">Permanent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

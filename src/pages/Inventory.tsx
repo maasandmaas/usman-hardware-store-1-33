@@ -13,9 +13,12 @@ import { Package, Search, Plus, AlertTriangle, TrendingUp, DollarSign, Edit, Tra
 import { useToast } from "@/hooks/use-toast";
 import { inventoryApi, productsApi, categoriesApi, unitsApi } from "@/services/api";
 import { FilteredProductsModal } from "@/components/FilteredProductsModal";
+import { InventorySummaryCards } from "@/components/inventory/InventorySummaryCards";
+import { useInventorySummary } from "@/hooks/useInventorySummary";
 
 const Inventory = () => {
   const { toast } = useToast();
+  const { summary, loading: summaryLoading, refetch: refetchSummary } = useInventorySummary();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -30,15 +33,9 @@ const Inventory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [itemsPerPage] = useState(20); // Changed from 12 to 20 to match API
-  const [summary, setSummary] = useState({
-    totalProducts: 0,
-    totalValue: 0,
-    lowStockItems: 0,
-    outOfStockItems: 0
-  });
+  const [itemsPerPage] = useState(20);
   const [filteredProductsModal, setFilteredProductsModal] = useState({
-    open: false,
+    open: false,  
     title: '',
     filterType: 'all' as 'lowStock' | 'outOfStock' | 'inStock' | 'all'
   });
@@ -129,23 +126,6 @@ const Inventory = () => {
           totalItems: finalTotalItems,
           inventoryLength: inventoryArray.length 
         });
-        
-        if (response.data?.summary) {
-          setSummary(response.data.summary);
-        } else {
-          // Use the total items from pagination for better summary
-          const totalProducts = finalTotalItems;
-          const totalValue = inventoryArray.reduce((sum, item) => sum + (item.value || 0), 0);
-          const lowStockItems = inventoryArray.filter(item => (item.currentStock || 0) <= (item.minStock || 0) && (item.currentStock || 0) > 0).length;
-          const outOfStockItems = inventoryArray.filter(item => (item.currentStock || 0) === 0).length;
-          
-          setSummary({
-            totalProducts,
-            totalValue,
-            lowStockItems,
-            outOfStockItems
-          });
-        }
       }
     } catch (error) {
       console.error('Failed to fetch inventory:', error);
@@ -420,7 +400,7 @@ const Inventory = () => {
     });
   };
 
-  if (loading) {
+  if (loading || summaryLoading) {
     return (
       <div className="flex-1 p-6 space-y-6 min-h-screen bg-background">
         <div className="flex items-center justify-center h-64">
@@ -440,56 +420,11 @@ const Inventory = () => {
         </div>
       </div>
 
-      {/* Summary Cards - Make them clickable */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('all', 'All Products')}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Package className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <p className="text-2xl font-bold text-blue-600">{summary.totalProducts}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('all', 'Total Inventory Value')}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <DollarSign className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold text-green-600">PKR {summary.totalValue.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('lowStock', 'Low Stock Items')}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold text-orange-600">{summary.lowStockItems}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('outOfStock', 'Out of Stock Items')}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Package className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Out of Stock</p>
-                <p className="text-2xl font-bold text-red-600">{summary.outOfStockItems}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Use the new reusable summary cards */}
+      <InventorySummaryCards 
+        summary={summary}
+        onCardClick={openFilteredModal}
+      />
 
       <Tabs defaultValue="inventory" className="space-y-4">
         <TabsList>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,8 +43,9 @@ const Customers = () => {
 
   const customerTypes = [
     { value: "all", label: "All Customers" },
-    { value: "individual", label: "Individual" },
-    { value: "business", label: "Business" },
+    { value: "Temporary", label: "Temporary" },
+    { value: "Semi-Permanent", label: "Semi-Permanent" },
+    { value: "Permanent", label: "Permanent" },
   ];
 
   // Debounced search
@@ -406,7 +408,7 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
     email: "", 
     address: "", 
     city: "",
-    type: "business",
+    type: "Permanent",
     creditLimit: ""
   });
 
@@ -417,7 +419,7 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
       creditLimit: parseFloat(formData.creditLimit) || 0
     });
     setFormData({ 
-      name: "", phone: "", email: "", address: "", city: "", type: "business", creditLimit: "" 
+      name: "", phone: "", email: "", address: "", city: "", type: "Permanent", creditLimit: "" 
     });
   };
 
@@ -438,11 +440,12 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
             />
           </div>
           <div>
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Phone Number (Optional)</Label>
             <Input
               id="phone"
               value={formData.phone}
               onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              placeholder="Enter phone number (optional)"
             />
           </div>
         </div>
@@ -483,8 +486,9 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="individual">Individual</SelectItem>
-                <SelectItem value="business">Business</SelectItem>
+                <SelectItem value="Temporary">Temporary</SelectItem>
+                <SelectItem value="Semi-Permanent">Semi-Permanent</SelectItem>
+                <SelectItem value="Permanent">Permanent</SelectItem>
               </SelectContent>
             </Select>
           </div>

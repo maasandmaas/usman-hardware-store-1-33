@@ -1,19 +1,15 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Search, ShoppingCart, Eye, Calendar, DollarSign, User, Package, FileText, RefreshCw } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { salesApi } from "@/services/api";
 import { OrderDetailsModal } from "@/components/orders/OrderDetailsModal";
 import { PDFExportModal, ExportOptions } from "@/components/orders/PDFExportModal";
+import { OrdersHeader } from "@/components/orders/OrdersHeader";
+import { OrdersSummaryCards } from "@/components/orders/OrdersSummaryCards";
+import { OrdersFilters } from "@/components/orders/OrdersFilters";
+import { OrdersTable } from "@/components/orders/OrdersTable";
+import { useOrderPDFGenerator } from "@/components/orders/OrdersPDFGenerator";
 import jsPDF from 'jspdf';
-import QRCode from 'qrcode';
 
 interface Sale {
   id: number;
@@ -41,6 +37,7 @@ interface Sale {
 
 const Orders = () => {
   const { toast } = useToast();
+  const { generateOrderPDF } = useOrderPDFGenerator();
   const [orders, setOrders] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
@@ -62,16 +59,23 @@ const Orders = () => {
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [isPDFExportModalOpen, setIsPDFExportModalOpen] = useState(false);
 
+  // Items per page for client-side pagination
+  const ITEMS_PER_PAGE = 20;
+
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, filterStatus, filterCustomer, filterPaymentMethod, dateFrom, dateTo]);
+  }, [filterStatus, filterCustomer, dateFrom, dateTo]);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterPaymentMethod]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const params: any = {
-        page: currentPage,
-        limit: 20
+        limit: 1000 // Fetch more records to handle client-side filtering
       };
 
       if (filterStatus !== "all") {
@@ -94,8 +98,24 @@ const Orders = () => {
       
       if (response.success) {
         setOrders(response.data.sales);
-        setTotalPages(response.data.pagination.totalPages);
-        setSummary(response.data.summary);
+        
+        // Calculate today's orders and margin
+        const today = new Date().toISOString().split('T')[0];
+        const todayOrders = response.data.sales.filter((order: Sale) => 
+          order.date === today
+        );
+        
+        const todayOrdersCount = todayOrders.length;
+        const todayMargin = todayOrders.reduce((total: number, order: Sale) => 
+          total + (order.subtotal - order.discount), 0
+        );
+        
+        // Update summary with today's data
+        setSummary({
+          ...response.data.summary,
+          todayOrders: todayOrdersCount,
+          todayMargin: todayMargin
+        });
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -114,350 +134,35 @@ const Orders = () => {
     setIsOrderDetailsOpen(true);
   };
 
-  // ENHANCED 80MM THERMAL RECEIPT
   const handleOrderPDF = async (order: Sale) => {
-    try {
-      // Calculate final total without tax (subtotal - discount)
-      const finalTotal = order.subtotal - order.discount;
-      
-      // Generate QR code with proper encoding
-      const qrData = `USMAN-HARDWARE-${order.orderNumber}-${finalTotal}-VERIFIED`;
-      const qrCodeDataURL = await QRCode.toDataURL(qrData, {
-        width: 60,
-        margin: 1,
-        color: {
-          dark: '#1a365d',
-          light: '#ffffff'
-        },
-        errorCorrectionLevel: 'H'
-      });
-
-      // --- DYNAMIC HEIGHT CALCULATION ---
-      // Static section heights (in mm)
-      let staticHeight = 0;
-      staticHeight += 8;   // Top margin
-      staticHeight += 40;  // Header section
-      staticHeight += 16;  // Receipt title
-      staticHeight += 26 + 4; // Receipt details box + spacing
-      staticHeight += 7;   // Items header
-      staticHeight += 3;   // Separator line after items
-      staticHeight += 6;   // Space after separator
-      staticHeight += 12;  // Totals section
-      staticHeight += 5 + 5 + 12; // Payment method title + badge + spacing
-      staticHeight += 4 + 28; // QR code title + QR code section
-      staticHeight += 20;  // Thank you message section
-      staticHeight += 23;  // Footer policies section
-      staticHeight += 8;   // Final footer (generated, receipt id)
-
-      // Calculate items section height
-      let itemsHeight = 0;
-      order.items.forEach((item: any) => {
-        const maxCharsPerLine = 20;
-        const productName = item.productName;
-        let lines = [];
-        if (productName.length <= maxCharsPerLine) {
-          lines.push(productName);
-        } else {
-          let remaining = productName;
-          while (remaining.length > maxCharsPerLine) {
-            let breakPoint = maxCharsPerLine;
-            const lastSpace = remaining.substring(0, maxCharsPerLine).lastIndexOf(' ');
-            if (lastSpace > maxCharsPerLine * 0.7) {
-              breakPoint = lastSpace;
-            }
-            lines.push(remaining.substring(0, breakPoint));
-            remaining = remaining.substring(breakPoint).trim();
-          }
-          if (remaining.length > 0) {
-            lines.push(remaining);
-          }
-        }
-        const itemHeight = Math.max(5, lines.length * 4);
-        itemsHeight += itemHeight;
-      });
-
-      // Add a little extra margin for safety
-      const totalHeight = staticHeight + itemsHeight + 10;
-
-      // Create 80mm thermal receipt with dynamic height
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: [80, totalHeight]
-      });
-
-      const pageWidth = 80;
-      let yPos = 8;
-
-      // Set default font to avoid character encoding issues
-      pdf.setFont('helvetica', 'normal');
-
-      // SUBTLE WATERMARK - Light diagonal background
-      pdf.setTextColor(250, 250, 250);
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      
-      pdf.saveGraphicsState();
-      pdf.setGState(pdf.GState({ opacity: 0.05 }));
-      
-      // Create subtle watermark pattern
-      for (let i = 0; i < 6; i++) {
-        const yWatermark = 40 + (i * 30);
-        pdf.text('USMAN HARDWARE', pageWidth / 2, yWatermark, {
-          angle: -20,
-          align: 'center'
-        });
-      }
-      
-      pdf.restoreGraphicsState();
-      pdf.setTextColor(0, 0, 0); // Reset to black
-
-      // HEADER SECTION with clean design
-      pdf.setFillColor(26, 54, 93);
-      pdf.roundedRect(4, yPos, pageWidth - 8, 32, 2, 2, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('USMAN HARDWARE', pageWidth / 2, yPos + 7, { align: 'center' });
-      
-      pdf.setFontSize(7);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Premium Furniture Hardware', pageWidth / 2, yPos + 13, { align: 'center' });
-      pdf.text('Hafizabad, Punjab', pageWidth / 2, yPos + 18, { align: 'center' });
-      pdf.text('+92-300-1234567', pageWidth / 2, yPos + 23, { align: 'center' });
-      pdf.text('www.usmanhardware.com', pageWidth / 2, yPos + 28, { align: 'center' });
-
-      yPos += 40;
-
-      // RECEIPT TITLE
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFillColor(248, 250, 252);
-      pdf.roundedRect(6, yPos, pageWidth - 12, 10, 1, 1, 'F');
-      pdf.setDrawColor(26, 54, 93);
-      pdf.setLineWidth(0.3);
-      pdf.roundedRect(6, yPos, pageWidth - 12, 10, 1, 1, 'S');
-      
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(26, 54, 93);
-      pdf.text('SALES RECEIPT', pageWidth / 2, yPos + 6.5, { align: 'center' });
-      
-      yPos += 16;
-
-      // RECEIPT DETAILS with proper spacing - LEFT ALIGNED
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'normal');
-      
-      // Clean info section
-      pdf.setFillColor(252, 252, 254);
-      pdf.roundedRect(5, yPos, pageWidth - 10, 26, 1, 1, 'F');
-      
-      yPos += 4;
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Receipt:', 8, yPos);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(order.orderNumber, 25, yPos);
-      yPos += 5;
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Date:', 8, yPos);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(new Date(order.date).toLocaleDateString('en-GB'), 25, yPos);
-      yPos += 5;
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Time:', 8, yPos);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(order.time, 25, yPos);
-      yPos += 5;
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Customer:', 8, yPos);
-      pdf.setFont('helvetica', 'normal');
-      const customerName = order.customerName || 'Walk-in Customer';
-      pdf.text(customerName.length > 23 ? customerName.substring(0, 23) + '...' : customerName, 25, yPos);
-      yPos += 5;
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Cashier:', 8, yPos);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(order.createdBy, 25, yPos);
-      yPos += 8;
-
-      // ITEMS HEADER - LEFT ALIGNED
-      pdf.setFillColor(26, 54, 93);
-      pdf.roundedRect(5, yPos, pageWidth - 8, 7, 1, 1, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7);
-      pdf.text('ITEM', 8, yPos + 4.5);
-      pdf.text('QTY', 50, yPos + 4.5);
-      pdf.text('RATE', 58, yPos + 4.5);
-      pdf.text('TOTAL', 68, yPos + 4.5);
-      
-      yPos += 7;
-
-      // ITEMS with complete product names and proper spacing - LEFT ALIGNED
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
-      
-      order.items.forEach((item: any, index: number) => {
-        const maxCharsPerLine = 20;
-        const productName = item.productName;
-        const lines = [];
-        if (productName.length <= maxCharsPerLine) {
-          lines.push(productName);
-        } else {
-          let remaining = productName;
-          while (remaining.length > maxCharsPerLine) {
-            let breakPoint = maxCharsPerLine;
-            const lastSpace = remaining.substring(0, maxCharsPerLine).lastIndexOf(' ');
-            if (lastSpace > maxCharsPerLine * 0.7) {
-              breakPoint = lastSpace;
-            }
-            lines.push(remaining.substring(0, breakPoint));
-            remaining = remaining.substring(breakPoint).trim();
-          }
-          if (remaining.length > 0) {
-            lines.push(remaining);
-          }
-        }
-        const itemHeight = Math.max(5, lines.length * 4);
-        if (index % 2 === 1) {
-          pdf.setFillColor(248, 250, 252);
-          pdf.rect(5, yPos, pageWidth - 10, itemHeight, 'F');
-        }
-        lines.forEach((line, lineIndex) => {
-          pdf.text(line, 8, yPos + 3 + (lineIndex * 3.5));
-        });
-        pdf.text(item.quantity.toString(), 50, yPos + 3);
-        pdf.text(item.unitPrice.toFixed(0), 58, yPos + 3);
-        pdf.text(item.total.toFixed(0), 68, yPos + 3);
-        yPos += itemHeight;
-      });
-
-      // SEPARATOR LINE
-      yPos += 3;
-      pdf.setDrawColor(26, 54, 93);
-      pdf.setLineWidth(0.5);
-      pdf.line(8, yPos, pageWidth - 8, yPos);
-      yPos += 6;
-
-      // TOTALS SECTION - LEFT ALIGNED (NO TAX)
-      const totalsStartX = 8;
-      pdf.setFontSize(7);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Subtotal:', totalsStartX, yPos);
-      pdf.text(`PKR ${order.subtotal.toFixed(0)}`, totalsStartX + 42, yPos);
-      yPos += 4;
-      if (order.discount > 0) {
-        pdf.setTextColor(220, 38, 127);
-        pdf.text('Discount:', totalsStartX, yPos);
-        pdf.text(`-PKR ${order.discount.toFixed(0)}`, totalsStartX + 35, yPos);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 4;
-      }
-      pdf.setFillColor(26, 54, 93);
-      pdf.roundedRect(5, yPos, pageWidth - 8, 7, 1, 1, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8);
-      pdf.text('TOTAL:', 8, yPos + 4);
-      pdf.text(`PKR ${finalTotal.toFixed(0)}`, 50, yPos + 4.5);
-      yPos += 12;
-
-      // PAYMENT METHOD centered
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Payment Method:', pageWidth / 2, yPos, { align: 'center' });
-      yPos += 5;
-      const paymentColor = order.paymentMethod === 'cash' ? [34, 197, 94] : [59, 130, 246];
-      pdf.setFillColor(paymentColor[0], paymentColor[1], paymentColor[2]);
-      pdf.roundedRect(pageWidth / 2 - 12, yPos, 24, 5, 2, 2, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7);
-      pdf.text(order.paymentMethod.toUpperCase(), pageWidth / 2, yPos + 3.5, { align: 'center' });
-      yPos += 12;
-
-      // QR CODE SECTION centered
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Scan to Verify:', pageWidth / 2, yPos, { align: 'center' });
-      yPos += 4;
-      const qrSize = 20;
-      const qrX = pageWidth / 2 - qrSize / 2;
-      pdf.setFillColor(255, 255, 255);
-      pdf.roundedRect(qrX - 2, yPos, qrSize + 4, qrSize + 4, 1, 1, 'F');
-      pdf.setDrawColor(26, 54, 93);
-      pdf.setLineWidth(0.5);
-      pdf.roundedRect(qrX - 2, yPos, qrSize + 4, qrSize + 4, 1, 1, 'S');
-      pdf.addImage(qrCodeDataURL, 'PNG', qrX, yPos + 2, qrSize, qrSize);
-      yPos += 28;
-
-      // THANK YOU MESSAGE centered
-      pdf.setFillColor(248, 250, 252);
-      pdf.roundedRect(6, yPos, pageWidth - 12, 15, 2, 2, 'F');
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(26, 54, 93);
-      pdf.text('Thank You!', pageWidth / 2, yPos + 6, { align: 'center' });
-      pdf.setFontSize(6);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(100, 100, 100);
-      pdf.text('Your trust means everything to us', pageWidth / 2, yPos + 10, { align: 'center' });
-      pdf.text('Visit us again soon!', pageWidth / 2, yPos + 13, { align: 'center' });
-      yPos += 20;
-
-      // FOOTER POLICIES centered
-      pdf.setFillColor(26, 54, 93);
-      pdf.roundedRect(4, yPos, pageWidth - 8, 18, 1, 1, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(6);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('EXCHANGE POLICY', pageWidth / 2, yPos + 4, { align: 'center' });
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(5);
-      pdf.text('Items exchangeable within 7 days', pageWidth / 2, yPos + 7, { align: 'center' });
-      pdf.text('Original receipt required', pageWidth / 2, yPos + 10, { align: 'center' });
-      pdf.text('Support: +92-300-1234567', pageWidth / 2, yPos + 13, { align: 'center' });
-      pdf.text('Hours: Mon-Sat 9AM-8PM', pageWidth / 2, yPos + 16, { align: 'center' });
-      yPos += 23;
-
-      // FINAL FOOTER centered
-      pdf.setTextColor(120, 120, 120);
-      pdf.setFontSize(5);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
-      pdf.text(`Receipt ID: ${order.orderNumber}`, pageWidth / 2, yPos + 3, { align: 'center' });
-
-      // Save with descriptive filename
-      pdf.save(`UH_Receipt_${order.orderNumber}_80mm.pdf`);
-      
-      toast({
-        title: "Receipt Generated!",
-        description: `Thermal receipt for order ${order.orderNumber}`,
-      });
-    } catch (error) {
-      console.error('Failed to generate receipt:', error);
-      toast({
-        title: "Receipt Generation Failed",
-        description: "Failed to generate thermal receipt. Please try again.",
-        variant: "destructive"
-      });
-    }
+    await generateOrderPDF(order);
   };
 
   const handleSearch = () => {
-    setCurrentPage(1);
-    fetchOrders();
+    setCurrentPage(1); // Reset to page 1 when searching
+    // No need to fetch again since we're doing client-side filtering
+  };
+
+  // Filter orders based on search term and payment method
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = 
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      order.items.some(item => item.productName.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesPaymentMethod = filterPaymentMethod === "all" || order.paymentMethod === filterPaymentMethod;
+    
+    return matchesSearch && matchesPaymentMethod;
+  });
+
+  // Calculate pagination for filtered results
+  const totalFilteredPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const handleAdvancedPDFExport = async (options: ExportOptions) => {
@@ -595,7 +300,7 @@ const Orders = () => {
           const rowData = [
             order.orderNumber.substring(0, 12),
             (order.customerName || 'Walk-in').substring(0, 18),
-            new Date(order.date).toLocaleDateString(),
+            new Date(order.date).toLocaleDateString('en-GB'),
             order.items.length.toString(),
             finalTotal.toLocaleString(),
             order.status
@@ -634,43 +339,6 @@ const Orders = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-green-100 text-green-700 border-green-200">Completed</Badge>;
-      case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Pending</Badge>;
-      case "cancelled":
-        return <Badge className="bg-red-100 text-red-700 border-red-200">Cancelled</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-700 border-gray-200">{status}</Badge>;
-    }
-  };
-
-  const getPaymentMethodBadge = (method: string) => {
-    switch (method) {
-      case "cash":
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Cash</Badge>;
-      case "credit":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Credit</Badge>;
-      case "card":
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Card</Badge>;
-      default:
-        return <Badge variant="outline">{method}</Badge>;
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      order.items.some(item => item.productName.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesPaymentMethod = filterPaymentMethod === "all" || order.paymentMethod === filterPaymentMethod;
-    
-    return matchesSearch && matchesPaymentMethod;
-  });
-
   if (loading) {
     return (
       <div className="flex-1 p-4 md:p-6 space-y-6 min-h-screen bg-slate-50">
@@ -694,260 +362,39 @@ const Orders = () => {
 
   return (
     <div className="flex-1 p-2 md:p-6 space-y-3 min-h-[calc(100vh-65px)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          
-          <div>
-            <h1 className="text-3xl font-bold text-slate-500">Orders Management</h1>
-            <p className="text-slate-600">View and manage all customer orders</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsPDFExportModalOpen(true)}
-            disabled={exportLoading}
-            className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-          >
-            {exportLoading ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4 mr-2" />
-            )}
-            {exportLoading ? 'Exporting...' : 'PDF Export'}
-          </Button>
-        </div>
-      </div>
+      <OrdersHeader 
+        onPDFExport={() => setIsPDFExportModalOpen(true)}
+        exportLoading={exportLoading}
+      />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ShoppingCart className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Total Orders</p>
-                <p className="text-2xl font-bold text-blue-600">{summary.totalOrders}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <OrdersSummaryCards summary={summary} />
 
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Total Sales</p>
-                <p className="text-2xl font-bold text-green-600">Rs. {summary.totalSales.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Package className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Avg Order Value</p>
-                <p className="text-2xl font-bold text-purple-600">Rs. {summary.avgOrderValue.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
       <Card className="border-slate-200">
-   
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mt-5 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-              <Input
-                placeholder="Search by order number, customer, or product..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
-              Search
-            </Button>
-          </div>
+          <OrdersFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            filterPaymentMethod={filterPaymentMethod}
+            setFilterPaymentMethod={setFilterPaymentMethod}
+            dateFrom={dateFrom}
+            setDateFrom={setDateFrom}
+            dateTo={dateTo}
+            setDateTo={setDateTo}
+            filterCustomer={filterCustomer}
+            setFilterCustomer={setFilterCustomer}
+            onSearch={handleSearch}
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Payment Method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Methods</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="date"
-              placeholder="From Date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-
-            <Input
-              type="date"
-              placeholder="To Date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-
-            <Input
-              placeholder="Customer ID"
-              value={filterCustomer}
-              onChange={(e) => setFilterCustomer(e.target.value)}
-              type="number"
-            />
-          </div>
-
-          {/* Orders Table */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((order) => {
-                  // Calculate final total without tax (subtotal - discount)
-                  const finalTotal = order.subtotal - order.discount;
-                  return (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-slate-400" />
-                          {order.customerName || "Walk-in"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-slate-400" />
-                          {new Date(order.date).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {order.items.length} item{order.items.length > 1 ? 's' : ''}
-                          <div className="text-xs text-slate-500">
-                            {order.items.slice(0, 2).map(item => item.productName).join(', ')}
-                            {order.items.length > 2 && '...'}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">Rs. {finalTotal.toLocaleString()}</TableCell>
-                      <TableCell>{getPaymentMethodBadge(order.paymentMethod)}</TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                            onClick={() => handleViewOrder(order)}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-red-300 text-red-700 hover:bg-red-50"
-                            onClick={() => handleOrderPDF(order)}
-                          >
-                            <FileText className="h-3 w-3 mr-1" />
-                            PDF
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredOrders.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              No orders found matching your criteria.
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <PaginationItem key={pageNum}>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(pageNum)}
-                          isActive={currentPage === pageNum}
-                          className="cursor-pointer"
-                        >
-                          {pageNum}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  })}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <OrdersTable
+            orders={paginatedOrders}
+            currentPage={currentPage}
+            totalPages={totalFilteredPages}
+            onViewOrder={handleViewOrder}
+            onOrderPDF={handleOrderPDF}
+            onPageChange={handlePageChange}
+          />
         </CardContent>
       </Card>
 

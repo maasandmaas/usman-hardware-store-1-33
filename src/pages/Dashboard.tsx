@@ -1,5 +1,5 @@
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -9,10 +9,7 @@ import { DollarSign, TrendingUp, Package, Users, AlertTriangle, CheckCircle, Sho
 import { useQuery } from "@tanstack/react-query"
 import { dashboardApi } from "@/services/api"
 import { reportsApi } from "@/services/reportsApi"
-
-
-import {  Legend, ReferenceLine } from "recharts";
-
+import { Legend, ReferenceLine } from "recharts";
 
 // Enhanced Chart configurations with beautiful colors
 const cashFlowChartConfig = {
@@ -349,193 +346,191 @@ export default function Dashboard() {
 
           {/* Enhanced Charts Section */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 mb-8">
-          <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-      <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/30">
-        <CardTitle className="flex items-center gap-3 text-lg font-bold tracking-tight">
-          <ArrowUpDown className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-          Cash Flow Analysis
-        </CardTitle>
-        <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
-          Monthly cash inflow vs outflow (in Rs.) with net cash flow trends
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-6">
-        <ChartContainer config={cashFlowChartConfig} className="h-[350px] w-full">
-          <LineChart 
-            data={cashFlowData} 
-            margin={{ top: 20, right: 40, left: 30, bottom: 30 }}
-          >
-            <CartesianGrid 
-              strokeDasharray="4 4" 
-              stroke="#e2e8f0" 
-              className="dark:stroke-slate-600" 
-              opacity={0.5}
-            />
-            <XAxis
-              dataKey="period"
-              tick={{ fontSize: 12, fill: 'currentColor', fontWeight: 500 }}
-              tickLine={false}
-              axisLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
-              padding={{ left: 10, right: 10 }}
-              tickMargin={10}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: 'currentColor', fontWeight: 500 }}
-              tickLine={false}
-              axisLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
-              tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`}
-              tickMargin={10}
-            />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value, name) => [
-                    `Rs. ${value.toLocaleString('en-IN')}`,
-                    cashFlowChartConfig[name]?.label || name,
-                  ]}
-                  labelFormatter={(label) => `Period: ${label}`}
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-3"
-                />
-              }
-            />
-            <Legend 
-              verticalAlign="top" 
-              height={36} 
-              iconType="circle" 
-              iconSize={10}
-              formatter={(value) => (
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {cashFlowChartConfig[value]?.label}
-                </span>
-              )}
-            />
-            <ReferenceLine 
-              y={0} 
-              stroke="#64748b" 
-              strokeDasharray="3 3" 
-              label={{ 
-                value: "Break-even", 
-                position: "insideTopLeft", 
-                fill: 'currentColor', 
-                fontSize: 12,
-                fontWeight: 500,
-                offset: 10
-              }} 
-            />
-            <Line
-              type="monotone"
-              dataKey="inflow"
-              stroke={cashFlowChartConfig.inflow.color}
-              strokeWidth={2.5}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-              name="inflow"
-              animationDuration={1000}
-            />
-            <Line
-              type="monotone"
-              dataKey="outflow"
-              stroke={cashFlowChartConfig.outflow.color}
-              strokeWidth={2.5}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-              name="outflow"
-              animationDuration={1000}
-            />
-            <Line
-              type="monotone"
-              dataKey="net"
-              stroke={cashFlowChartConfig.net.color}
-              strokeWidth={2.5}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-              name="net"
-              animationDuration={1000}
-            />
-          </LineChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-
-    <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-      <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-900/30">
-        <CardTitle className="flex items-center gap-3 text-lg font-bold tracking-tight">
-          <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
-          Sales by Category
-        </CardTitle>
-        <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
-          Revenue distribution across product categories (in Rs.)
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-6">
-        <ChartContainer config={categoryChartConfig} className="h-[350px] w-full">
-          <PieChart>
-            <Pie
-              data={formattedCategoryData}
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              innerRadius={50}
-              dataKey="value"
-              label={({ percentage }) => `${percentage}%`}
-              labelLine={{ stroke: '#64748b', strokeWidth: 1 }}
-              label={({ cx, cy, midAngle, outerRadius, percentage, index }) => {
-                const RADIAN = Math.PI / 180;
-                const radius = outerRadius + 20;
-                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                return (
-                  <text
-                    x={x}
-                    y={y}
-                    fill="currentColor"
-                    textAnchor={x > cx ? 'start' : 'end'}
-                    dominantBaseline="central"
-                    fontSize={12}
-                    fontWeight={500}
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/30">
+                <CardTitle className="flex items-center gap-3 text-lg font-bold tracking-tight">
+                  <ArrowUpDown className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  Cash Flow Analysis
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                  Monthly cash inflow vs outflow (in Rs.) with net cash flow trends
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ChartContainer config={cashFlowChartConfig} className="h-[350px] w-full">
+                  <LineChart 
+                    data={cashFlowData} 
+                    margin={{ top: 20, right: 40, left: 30, bottom: 30 }}
                   >
-                    {`${percentage}%`}
-                  </text>
-                );
-              }}
-              animationDuration={800}
-              animationBegin={200}
-            >
-              {formattedCategoryData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.color || defaultColors[index % defaultColors.length]}
-                />
-              ))}
-            </Pie>
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value, name, props) => [
-                    `Rs. ${value.toLocaleString('en-IN')}`,
-                    `${props.payload.name} (${props.payload.percentage}%)`,
-                  ]}
-                  labelFormatter={() => ''}
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-3"
-                />
-              }
-            />
-            <Legend
-              verticalAlign="top"
-              height={36}
-              iconType="circle"
-              iconSize={10}
-              formatter={(value) => (
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {categoryChartConfig[value]?.label || value}
-                </span>
-              )}
-              wrapperStyle={{ paddingBottom: 10 }}
-            />
-          </PieChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+                    <CartesianGrid 
+                      strokeDasharray="4 4" 
+                      stroke="#e2e8f0" 
+                      className="dark:stroke-slate-600" 
+                      opacity={0.5}
+                    />
+                    <XAxis
+                      dataKey="period"
+                      tick={{ fontSize: 12, fill: 'currentColor', fontWeight: 500 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
+                      padding={{ left: 10, right: 10 }}
+                      tickMargin={10}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: 'currentColor', fontWeight: 500 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
+                      tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`}
+                      tickMargin={10}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => [
+                            `Rs. ${value.toLocaleString('en-IN')}`,
+                            cashFlowChartConfig[name]?.label || name,
+                          ]}
+                          labelFormatter={(label) => `Period: ${label}`}
+                          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-3"
+                        />
+                      }
+                    />
+                    <Legend 
+                      verticalAlign="top" 
+                      height={36} 
+                      iconType="circle" 
+                      iconSize={10}
+                      formatter={(value) => (
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                          {cashFlowChartConfig[value]?.label}
+                        </span>
+                      )}
+                    />
+                    <ReferenceLine 
+                      y={0} 
+                      stroke="#64748b" 
+                      strokeDasharray="3 3" 
+                      label={{ 
+                        value: "Break-even", 
+                        position: "insideTopLeft", 
+                        fill: 'currentColor', 
+                        fontSize: 12,
+                        fontWeight: 500,
+                        offset: 10
+                      }} 
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="inflow"
+                      stroke={cashFlowChartConfig.inflow.color}
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="inflow"
+                      animationDuration={1000}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="outflow"
+                      stroke={cashFlowChartConfig.outflow.color}
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="outflow"
+                      animationDuration={1000}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="net"
+                      stroke={cashFlowChartConfig.net.color}
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="net"
+                      animationDuration={1000}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+              <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-900/30">
+                <CardTitle className="flex items-center gap-3 text-lg font-bold tracking-tight">
+                  <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  Sales by Category
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                  Revenue distribution across product categories (in Rs.)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ChartContainer config={categoryChartConfig} className="h-[350px] w-full">
+                  <PieChart>
+                    <Pie
+                      data={formattedCategoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      innerRadius={50}
+                      dataKey="value"
+                      label={({ cx, cy, midAngle, outerRadius, percentage }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = outerRadius + 20;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        return (
+                          <text
+                            x={x}
+                            y={y}
+                            fill="currentColor"
+                            textAnchor={x > cx ? 'start' : 'end'}
+                            dominantBaseline="central"
+                            fontSize={12}
+                            fontWeight={500}
+                          >
+                            {`${percentage}%`}
+                          </text>
+                        );
+                      }}
+                      animationDuration={800}
+                      animationBegin={200}
+                    >
+                      {formattedCategoryData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color || defaultColors[index % defaultColors.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name, props) => [
+                            `Rs. ${value.toLocaleString('en-IN')}`,
+                            `${props.payload.name} (${props.payload.percentage}%)`,
+                          ]}
+                          labelFormatter={() => ''}
+                          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-3"
+                        />
+                      }
+                    />
+                    <Legend
+                      verticalAlign="top"
+                      height={36}
+                      iconType="circle"
+                      iconSize={10}
+                      formatter={(value) => (
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                          {categoryChartConfig[value]?.label || value}
+                        </span>
+                      )}
+                      wrapperStyle={{ paddingBottom: 10 }}
+                    />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
 
             {/* Payment Methods Distribution */}
             <Card className="col-span-1 shadow-lg border-0">
@@ -628,16 +623,16 @@ export default function Dashboard() {
                 <CardDescription className="text-sm">Revenue and orders over time</CardDescription>
               </CardHeader>
               <CardContent className="p-4">
-                <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
-                  <LineChart data={stats?.performance?.weeklyTrend || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
-                    <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
-                    <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`} />
-                    <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [`Rs. ${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Orders']} />} />
-                    <Line dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} />
-                    <Line dataKey="orders" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }} />
-                  </LineChart>
-                </ChartContainer>
+              <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
+  <LineChart data={stats?.performance?.weeklyTrend || []}>
+    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
+    <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
+    <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`} />
+    <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [`Rs. ${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Orders']} />} />
+    <Line dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} />
+    <Line dataKey="orders" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }} />
+  </LineChart>
+</ChartContainer>
               </CardContent>
             </Card>
 
