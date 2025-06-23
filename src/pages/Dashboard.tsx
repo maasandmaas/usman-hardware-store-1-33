@@ -346,114 +346,45 @@ export default function Dashboard() {
 
           {/* Enhanced Charts Section */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 mb-8">
-            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/30">
-                <CardTitle className="flex items-center gap-3 text-lg font-bold tracking-tight">
-                  <ArrowUpDown className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  Cash Flow Analysis
+            {/* Sales vs Target */}
+            <Card className="col-span-1 shadow-lg border-0">
+              <CardHeader className="pb-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <Target className="h-5 w-5 text-orange-600" />
+                  Sales vs Target
                 </CardTitle>
-                <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
-                  Monthly cash inflow vs outflow (in Rs.) with net cash flow trends
-                </CardDescription>
+                <CardDescription className="text-sm">Daily performance comparison (Rs.)</CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
-                <ChartContainer config={cashFlowChartConfig} className="h-[350px] w-full">
-                  <LineChart 
-                    data={cashFlowData} 
-                    margin={{ top: 20, right: 40, left: 30, bottom: 30 }}
-                  >
-                    <CartesianGrid 
-                      strokeDasharray="4 4" 
-                      stroke="#e2e8f0" 
-                      className="dark:stroke-slate-600" 
-                      opacity={0.5}
-                    />
-                    <XAxis
-                      dataKey="period"
-                      tick={{ fontSize: 12, fill: 'currentColor', fontWeight: 500 }}
+              <CardContent className="p-4">
+                <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
+                  <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
+                    <XAxis 
+                      dataKey="day" 
+                      tick={{ fontSize: 12, fill: 'currentColor' }}
                       tickLine={false}
-                      axisLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
-                      padding={{ left: 10, right: 10 }}
-                      tickMargin={10}
+                      axisLine={false}
                     />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: 'currentColor', fontWeight: 500 }}
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: 'currentColor' }}
                       tickLine={false}
-                      axisLine={{ stroke: '#e2e8f0', strokeWidth: 1 }}
+                      axisLine={false}
                       tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`}
-                      tickMargin={10}
                     />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value, name) => [
-                            `Rs. ${value.toLocaleString('en-IN')}`,
-                            cashFlowChartConfig[name]?.label || name,
-                          ]}
-                          labelFormatter={(label) => `Period: ${label}`}
-                          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-3"
-                        />
-                      }
+                    <ChartTooltip 
+                      content={<ChartTooltipContent 
+                        formatter={(value, name) => [
+                          `Rs. ${value.toLocaleString()}`,
+                          name === 'sales' ? 'Actual Sales' : 'Sales Target'
+                        ]}
+                      />} 
                     />
-                    <Legend 
-                      verticalAlign="top" 
-                      height={36} 
-                      iconType="circle" 
-                      iconSize={10}
-                      formatter={(value) => (
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {cashFlowChartConfig[value]?.label}
-                        </span>
-                      )}
-                    />
-                    <ReferenceLine 
-                      y={0} 
-                      stroke="#64748b" 
-                      strokeDasharray="3 3" 
-                      label={{ 
-                        value: "Break-even", 
-                        position: "insideTopLeft", 
-                        fill: 'currentColor', 
-                        fontSize: 12,
-                        fontWeight: 500,
-                        offset: 10
-                      }} 
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="inflow"
-                      stroke={cashFlowChartConfig.inflow.color}
-                      strokeWidth={2.5}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name="inflow"
-                      animationDuration={1000}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="outflow"
-                      stroke={cashFlowChartConfig.outflow.color}
-                      strokeWidth={2.5}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name="outflow"
-                      animationDuration={1000}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="net"
-                      stroke={cashFlowChartConfig.net.color}
-                      strokeWidth={2.5}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name="net"
-                      animationDuration={1000}
-                    />
-                  </LineChart>
+                    <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} name="Actual Sales" />
+                    <Bar dataKey="target" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Sales Target" />
+                  </BarChart>
                 </ChartContainer>
               </CardContent>
             </Card>
-
             <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-900/30">
                 <CardTitle className="flex items-center gap-3 text-lg font-bold tracking-tight">
@@ -476,7 +407,7 @@ export default function Dashboard() {
                       dataKey="value"
                       label={({ cx, cy, midAngle, outerRadius, percentage }) => {
                         const RADIAN = Math.PI / 180;
-                        const radius = outerRadius + 20;
+                        const radius = outerRadius + 30;
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
                         const y = cy + radius * Math.sin(-midAngle * RADIAN);
                         return (
@@ -486,8 +417,8 @@ export default function Dashboard() {
                             fill="currentColor"
                             textAnchor={x > cx ? 'start' : 'end'}
                             dominantBaseline="central"
-                            fontSize={12}
-                            fontWeight={500}
+                            fontSize={15}
+                            fontWeight={400}
                           >
                             {`${percentage}%`}
                           </text>
@@ -531,85 +462,9 @@ export default function Dashboard() {
                 </ChartContainer>
               </CardContent>
             </Card>
+            
 
-            {/* Payment Methods Distribution */}
-            <Card className="col-span-1 shadow-lg border-0">
-              <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <CreditCard className="h-5 w-5 text-purple-600" />
-                  Payment Methods
-                </CardTitle>
-                <CardDescription className="text-sm">Distribution by payment method</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4">
-                <ChartContainer config={categoryChartConfig} className="h-[300px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={paymentMethodData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      innerRadius={40}
-                      dataKey="value"
-                      label={({ name, count }) => `${name}: ${count} orders`}
-                      labelLine={false}
-                    >
-                      {paymentMethodData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip 
-                      content={<ChartTooltipContent 
-                        formatter={(value, name, props) => [
-                          `Rs. ${props.payload.value.toLocaleString()}`,
-                          `${props.payload.name} (${props.payload.count} orders)`
-                        ]}
-                      />} 
-                    />
-                  </PieChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            {/* Sales vs Target */}
-            <Card className="col-span-1 shadow-lg border-0">
-              <CardHeader className="pb-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <Target className="h-5 w-5 text-orange-600" />
-                  Sales vs Target
-                </CardTitle>
-                <CardDescription className="text-sm">Daily performance comparison (Rs.)</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4">
-                <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
-                  <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
-                    <XAxis 
-                      dataKey="day" 
-                      tick={{ fontSize: 12, fill: 'currentColor' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12, fill: 'currentColor' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`}
-                    />
-                    <ChartTooltip 
-                      content={<ChartTooltipContent 
-                        formatter={(value, name) => [
-                          `Rs. ${value.toLocaleString()}`,
-                          name === 'sales' ? 'Actual Sales' : 'Sales Target'
-                        ]}
-                      />} 
-                    />
-                    <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} name="Actual Sales" />
-                    <Bar dataKey="target" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Sales Target" />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
+            
           </div>
 
           {/* New Analytics Section - Weekly Performance Trend */}
