@@ -179,7 +179,7 @@ export const CustomerCards = ({ customers, loading, onSelectCustomer, onEditCust
                   disabled={exportingCustomer === customer.id}
                 >
                   <Download className="h-4 w-4 mr-1" />
-                  {exportingCustomer === customer.id ? 'Exporting...' : 'Export'}
+                  {exportingCustomer === customer.id ? 'Exporting...' : ''}
                 </Button>
               </div>
             </div>
