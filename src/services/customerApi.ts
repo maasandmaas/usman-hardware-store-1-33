@@ -176,7 +176,7 @@ const generateMockCustomerData = (): {
       id: 1,
       name: 'Ahmad Furniture Store',
       email: 'ahmad@furniture.com',
-      phone: '+92-300-1234567',
+      phone: '+92-322-6506118',
       type: 'business',
       address: '123 Main Street',
       city: 'Karachi',

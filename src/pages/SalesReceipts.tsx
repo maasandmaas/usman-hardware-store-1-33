@@ -235,7 +235,7 @@ const SalesReceipts = () => {
       pdf.setFont('helvetica', 'normal');
       pdf.text('Thank you for your business!', pageWidth / 2, yPos, { align: 'center' });
       yPos += 3;
-      pdf.text('For queries: +92-300-1234567', pageWidth / 2, yPos, { align: 'center' });
+      pdf.text('For queries: +92-322-6506118', pageWidth / 2, yPos, { align: 'center' });
       yPos += 3;
       pdf.text('www.usmanhardware.com', pageWidth / 2, yPos, { align: 'center' });
       yPos += 5;
@@ -463,7 +463,7 @@ const ReceiptDetails = ({ receipt }: { receipt: SalesReceipt }) => (
         <h1 className="text-2xl font-bold">USMAN HARDWARE</h1>
         <p className="text-blue-100 text-sm">Furniture Hardware Specialist</p>
         <p className="text-blue-100 text-xs">Hafizabad, Punjab, Pakistan</p>
-        <p className="text-blue-100 text-xs">Phone: +92-300-1234567</p>
+        <p className="text-blue-100 text-xs">Phone: +92-322-6506118</p>
       </div>
 
       {/* Receipt Info */}
@@ -570,7 +570,7 @@ const ReceiptDetails = ({ receipt }: { receipt: SalesReceipt }) => (
       {/* Footer */}
       <div className="px-6 py-4 border-t text-center">
         <p className="text-xs text-gray-500 mb-2">Thank you for your business!</p>
-        <p className="text-xs text-gray-400">For queries: +92-300-1234567</p>
+        <p className="text-xs text-gray-400">For queries: +92-322-6506118</p>
         <div className="mt-4 pt-3 border-t border-dashed">
           <p className="text-xs text-gray-400">
             Generated: {new Date().toLocaleString()}

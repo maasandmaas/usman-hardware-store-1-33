@@ -72,7 +72,7 @@ const Finance = () => {
           supplierName: "ABC Suppliers",
           amount: 8000,
           contactPerson: "John Doe",
-          phone: "+92-300-1234567",
+          phone: "+92-322-6506118",
           email: "john@abcsuppliers.com",
           pendingOrders: 2
         },
@@ -81,7 +81,7 @@ const Finance = () => {
           supplierName: "XYZ Traders",
           amount: 12000,
           contactPerson: "Jane Smith",
-          phone: "+92-300-7654321",
+          phone: "+92-322-6506118",
           email: "jane@xyztraders.com",
           pendingOrders: 1
         }

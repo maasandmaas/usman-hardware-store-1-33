@@ -135,7 +135,7 @@ export const useOrderPDFGenerator = () => {
       pdf.setFont('helvetica', 'normal');
       pdf.text('Premium Furniture Hardware', pageWidth / 2, yPos + 13, { align: 'center' });
       pdf.text('Hafizabad, Punjab', pageWidth / 2, yPos + 18, { align: 'center' });
-      pdf.text('+92-300-1234567', pageWidth / 2, yPos + 23, { align: 'center' });
+      pdf.text('+92-322-6506118', pageWidth / 2, yPos + 23, { align: 'center' });
       pdf.text('www.usmanhardware.com', pageWidth / 2, yPos + 28, { align: 'center' });
 
       yPos += 40;
@@ -336,8 +336,8 @@ export const useOrderPDFGenerator = () => {
       pdf.setFontSize(5);
       pdf.text('Items exchangeable within 7 days', pageWidth / 2, yPos + 7, { align: 'center' });
       pdf.text('Original receipt required', pageWidth / 2, yPos + 10, { align: 'center' });
-      pdf.text('Support: +92-300-1234567', pageWidth / 2, yPos + 13, { align: 'center' });
-      pdf.text('Hours: Mon-Sat 9AM-8PM', pageWidth / 2, yPos + 16, { align: 'center' });
+      pdf.text('Support: +92-322-6506118', pageWidth / 2, yPos + 13, { align: 'center' });
+      pdf.text('Hours: Sat-Thu 8AM-8PM', pageWidth / 2, yPos + 16, { align: 'center' });
       yPos += 23;
 
       // FINAL FOOTER
