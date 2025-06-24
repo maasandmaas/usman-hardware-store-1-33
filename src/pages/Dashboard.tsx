@@ -415,68 +415,59 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="p-6">
                 <ChartContainer config={categoryChartConfig} className="h-[350px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={formattedCategoryData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      innerRadius={50}
-                      dataKey="value"
-                      label={({ cx, cy, midAngle, outerRadius, percentage }) => {
-                        const RADIAN = Math.PI / 180;
-                        const radius = outerRadius + 30;
-                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  <BarChart
+                    data={formattedCategoryData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    barCategoryGap={50}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
+                    <XAxis
+                      dataKey="name"
+                      interval={0}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={(props) => {
+                        const { x, y, payload } = props;
                         return (
                           <text
                             x={x}
                             y={y}
+                            dy={20}
+                            textAnchor="end"
+                            fontSize={12}
                             fill="currentColor"
-                            textAnchor={x > cx ? 'start' : 'end'}
-                            dominantBaseline="central"
-                            fontSize={15}
-                            fontWeight={400}
+                            transform={`rotate(-30, ${x}, ${y})`}
                           >
-                            {`${percentage}%`}
+                            {payload.value}
                           </text>
                         );
                       }}
-                      animationDuration={800}
-                      animationBegin={200}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: 'currentColor' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`}
+                    />
+                    <ChartTooltip
+                      content={<ChartTooltipContent
+                        formatter={(value, name, props) => [
+                          `Rs. ${value.toLocaleString('en-IN')}`,
+                          `${props.payload.name}`,
+                        ]}
+                      />}
+                    />
+                    <Bar
+                      dataKey="value"
+                      name="Revenue"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
                     >
                       {formattedCategoryData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.color || defaultColors[index % defaultColors.length]}
-                        />
+                        <Cell key={`cell-${index}`} fill={entry.color || defaultColors[index % defaultColors.length]} />
                       ))}
-                    </Pie>
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value, name, props) => [
-                            `Rs. ${value.toLocaleString('en-IN')}`,
-                            `${props.payload.name} (${props.payload.percentage}%)`,
-                          ]}
-                          labelFormatter={() => ''}
-                          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-3"
-                        />
-                      }
-                    />
-                    <Legend
-                      verticalAlign="top"
-                      height={36}
-                      iconType="circle"
-                      iconSize={10}
-                      formatter={(value) => (
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {categoryChartConfig[value]?.label || value}
-                        </span>
-                      )}
-                      wrapperStyle={{ paddingBottom: 10 }}
-                    />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ChartContainer>
               </CardContent>
             </Card>

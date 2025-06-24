@@ -74,11 +74,6 @@ const mainItems: MenuItem[] = [
     url: "/customers",
     icon: Users,
   },
-  {
-    title: "Inventory",
-    url: "/inventory",
-    icon: Warehouse,
-  },
 ]
 
 // Business Operations - removed Sales Receipts
