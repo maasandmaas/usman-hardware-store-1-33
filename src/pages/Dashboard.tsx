@@ -10,6 +10,20 @@ import { useQuery } from "@tanstack/react-query"
 import { dashboardApi } from "@/services/api"
 import { reportsApi } from "@/services/reportsApi"
 import { Legend, ReferenceLine } from "recharts";
+function formatNumber(value) {
+  const num = Number(value);
+  if (isNaN(num)) return '0';
+
+  if (num >= 10000000) {
+    return (num / 10000000).toFixed(2) + ' Cr';
+  } else if (num >= 100000) {
+    return (num / 100000).toFixed(2) + ' Lac';
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(2) + ' K';
+  } else {
+    return num.toFixed(0);
+  }
+}
 
 // Enhanced Chart configurations with beautiful colors
 const cashFlowChartConfig = {
@@ -177,7 +191,8 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Today's Revenue</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                        Rs. {stats?.financial?.todayRevenue?.toLocaleString() || '0'}
+                      Rs. {formatNumber(stats?.financial?.todayRevenue)}
+
                       </p>
                       <p className="text-xs text-white/80">
                         {stats?.financial?.revenueGrowth > 0 ? '+' : ''}
@@ -199,7 +214,8 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Today's Orders</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                        {stats?.sales?.todaySales?.toLocaleString() || '0'}
+                      Rs. {formatNumber(stats?.sales?.todaySales)}
+
                       </p>
                       <p className="text-xs text-white/80">
                         Avg: Rs. {stats?.sales?.avgOrderValue?.toLocaleString() || '0'}
@@ -265,7 +281,8 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Month Revenue</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                        Rs. {(stats?.financial?.monthRevenue)?.toFixed(0) || '0'}
+                      Rs. {formatNumber(stats?.financial?.monthRevenue)}
+
                       </p>
                       <p className="text-xs text-white/80">
                         {stats?.financial?.monthlyGrowth?.toFixed(1) || '0'}% growth
@@ -286,7 +303,8 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Monthly Profit</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {(stats?.financial?.netProfit)?.toFixed(0) || '0'}
+                      Rs. {formatNumber(stats?.financial?.netProfit)}
+
                         
                       </p>
                       <p className="text-xs text-white/80">
@@ -308,7 +326,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Inventory Value</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                        Rs. {(stats?.inventory?.totalInventoryValue / 1000000)?.toFixed(1) || '0'}M
+                      Rs. {formatNumber(stats?.inventory?.totalInventoryValue)}
                       </p>
                       <p className="text-xs text-white/80">
                         Turnover: {stats?.inventory?.inventoryTurnover?.toFixed(2) || '0'}
@@ -329,7 +347,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Receivables</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                        Rs. {stats?.customers?.totalReceivables?.toLocaleString() || '0'}
+                      Rs. {formatNumber(stats?.customers?.totalReceivables)}
                       </p>
                       <p className="text-xs text-white/80">
                         Outstanding payments
@@ -686,7 +704,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  Rs. {stats?.performance?.dailyAvgRevenue?.toLocaleString() || '0'}
+                Rs. {formatNumber(stats?.performance?.dailyAvgRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Average per day
@@ -934,7 +952,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-center p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        Rs. {inventoryReport.data?.inventoryReport?.totalValue?.toLocaleString() || '0'}
+                      Rs. {formatNumber(inventoryReport.data?.inventoryReport?.totalValue)}
                       </p>
                       <p className="text-sm text-muted-foreground">Total Value</p>
                     </div>
