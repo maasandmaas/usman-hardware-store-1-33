@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,29 @@ interface Sale {
   createdBy: string;
   createdAt: string;
 }
+
+// Helper function to format time to 12-hour Pakistani format
+const formatPakistaniTime = (timeString: string): string => {
+  try {
+    // Parse the time string (assuming it's in HH:mm format)
+    const [hours, minutes] = timeString.split(':').map(Number);
+    
+    // Create a date object for formatting
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    
+    // Format to 12-hour format
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Karachi'
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return timeString; // Return original if formatting fails
+  }
+};
 
 export const useOrderPDFGenerator = () => {
   const { toast } = useToast();
@@ -180,7 +204,7 @@ export const useOrderPDFGenerator = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('Time:', 8, yPos);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(order.time, 25, yPos);
+      pdf.text(formatPakistaniTime(order.time), 25, yPos);
       yPos += 5;
       
       pdf.setFont('helvetica', 'bold');
@@ -347,8 +371,13 @@ export const useOrderPDFGenerator = () => {
       pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
       pdf.text(`Receipt ID: ${order.orderNumber}`, pageWidth / 2, yPos + 3, { align: 'center' });
 
-      // Save with descriptive filename
-      pdf.save(`UH_Receipt_${order.orderNumber}_80mm.pdf`);
+      // Create filename with customer name + order number
+      const customerName = order.customerName || 'Walk-in-Customer';
+      const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9-_]/g, '-');
+      const filename = `${sanitizedCustomerName} ${order.orderNumber}.pdf`;
+
+      // Save with new filename format
+      pdf.save(filename);
       
       toast({
         title: "Receipt Generated!",
