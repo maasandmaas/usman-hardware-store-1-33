@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { useToast } from "@/hooks/use-toast";
@@ -210,8 +209,8 @@ export const useOrderPDFGenerator = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('Customer:', 8, yPos);
       pdf.setFont('helvetica', 'normal');
-      const customerName = order.customerName || 'Walk-in Customer';
-      pdf.text(customerName.length > 23 ? customerName.substring(0, 23) + '...' : customerName, 25, yPos);
+      const customerDisplayName = order.customerName || 'Walk-in Customer';
+      pdf.text(customerDisplayName.length > 23 ? customerDisplayName.substring(0, 23) + '...' : customerDisplayName, 25, yPos);
       yPos += 5;
       
       pdf.setFont('helvetica', 'bold');
@@ -372,8 +371,8 @@ export const useOrderPDFGenerator = () => {
       pdf.text(`Receipt ID: ${order.orderNumber}`, pageWidth / 2, yPos + 3, { align: 'center' });
 
       // Create filename with customer name + order number
-      const customerName = order.customerName || 'Walk-in-Customer';
-      const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9-_]/g, '-');
+      const customerFilenamePart = order.customerName || 'Walk-in-Customer';
+      const sanitizedCustomerName = customerFilenamePart.replace(/[^a-zA-Z0-9-_]/g, '-');
       const filename = `${sanitizedCustomerName} ${order.orderNumber}.pdf`;
 
       // Save with new filename format
