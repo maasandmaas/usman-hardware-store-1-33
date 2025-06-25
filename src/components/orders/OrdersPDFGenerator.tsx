@@ -29,14 +29,12 @@ interface Sale {
 // Helper function to format time to 12-hour Pakistani format
 const formatPakistaniTime = (timeString: string): string => {
   try {
-    // Parse the time string (assuming it's in HH:mm format)
+    // Create a date object for today with the given time
     const [hours, minutes] = timeString.split(':').map(Number);
-    
-    // Create a date object for formatting
     const date = new Date();
     date.setHours(hours, minutes, 0, 0);
     
-    // Format to 12-hour format
+    // Convert to Pakistani timezone and format to 12-hour format
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
